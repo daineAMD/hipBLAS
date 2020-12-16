@@ -49,66 +49,39 @@ hipblasStatus_t testing_axpy_batched_ex_template(Arguments argus)
     Ta  alpha = argus.alpha;
 
     // Naming: dX is in GPU (device) memory. hK is in CPU (host) memory, plz follow this practice
-    host_vector<Tx> hx_array[batch_count];
-    host_vector<Ty> hy_array[batch_count];
-    host_vector<Tx> hx_cpu_array[batch_count];
-    host_vector<Ty> hy_cpu_array[batch_count];
+    host_batch_vector<Tx> hx(N, incx, batch_count);
+    host_batch_vector<Ty> hy(N, incy, batch_count);
+    host_batch_vector<Tx> hx_cpu(N, incx, batch_count);
+    host_batch_vector<Ty> hy_cpu(N, incy, batch_count);
 
-    device_batch_vector<Tx> bx_array(batch_count, sizeX);
-    device_batch_vector<Ty> by_array(batch_count, sizeY);
-
-    device_vector<Tx*, 0, Tx> dx_array(batch_count);
-    device_vector<Ty*, 0, Ty> dy_array(batch_count);
-
-    int last = batch_count - 1;
-    if(!dx_array || !dy_array || (!bx_array[last] && sizeX) || (!by_array[last] && sizeY))
-    {
-        return HIPBLAS_STATUS_ALLOC_FAILED;
-    }
-
-    double gpu_time_used, cpu_time_used;
-    double rocblas_error = 0.0;
+    device_batch_vector<Tx> dx(N, incx, batch_count);
+    device_batch_vector<Ty> dy(N, incy, batch_count);
+    CHECK_HIP_ERROR(dx.memcheck());
+    CHECK_HIP_ERROR(dy.memcheck());
 
     hipblasHandle_t handle;
     hipblasCreate(&handle);
 
     // Initial Data on CPU
-    srand(1);
-    for(int b = 0; b < batch_count; b++)
-    {
-        hx_array[b]     = host_vector<Tx>(sizeX);
-        hy_array[b]     = host_vector<Ty>(sizeY);
-        hx_cpu_array[b] = host_vector<Tx>(sizeX);
-        hy_cpu_array[b] = host_vector<Ty>(sizeY);
+    hipblas_init(hx, true);
+    hipblas_init(hy, false);
+    hx_cpu.copy_from(hx);
+    hy_cpu.copy_from(hy);
 
-        srand(1);
-        hipblas_init(hx_array[b], 1, N, abs_incx);
-        hipblas_init(hy_array[b], 1, N, abs_incy);
-
-        hx_cpu_array[b] = hx_array[b];
-        hy_cpu_array[b] = hy_array[b];
-
-        CHECK_HIP_ERROR(
-            hipMemcpy(bx_array[b], hx_array[b], sizeof(Tx) * sizeX, hipMemcpyHostToDevice));
-        CHECK_HIP_ERROR(
-            hipMemcpy(by_array[b], hy_array[b], sizeof(Ty) * sizeY, hipMemcpyHostToDevice));
-    }
-    CHECK_HIP_ERROR(
-        hipMemcpy(dx_array, bx_array, sizeof(Tx*) * batch_count, hipMemcpyHostToDevice));
-    CHECK_HIP_ERROR(
-        hipMemcpy(dy_array, by_array, sizeof(Ty*) * batch_count, hipMemcpyHostToDevice));
+    CHECK_HIP_ERROR(dx.transfer_from(hx));
+    CHECK_HIP_ERROR(dy.transfer_from(hy));
 
     /* =====================================================================
-         ROCBLAS
+         HIPBLAS
     =================================================================== */
     status = hipblasAxpyBatchedExFn(handle,
                                     N,
                                     &alpha,
                                     alphaType,
-                                    dx_array,
+                                    dx.ptr_on_device(),
                                     xType,
                                     incx,
-                                    dy_array,
+                                    dy.ptr_on_device(),
                                     yType,
                                     incy,
                                     batch_count,
@@ -119,14 +92,8 @@ hipblasStatus_t testing_axpy_batched_ex_template(Arguments argus)
         return status;
     }
 
-    for(int b = 0; b < batch_count; b++)
-    {
-        // copy output from device to CPU
-        CHECK_HIP_ERROR(
-            hipMemcpy(hx_array[b], bx_array[b], sizeof(Tx) * sizeX, hipMemcpyDeviceToHost));
-        CHECK_HIP_ERROR(
-            hipMemcpy(hy_array[b], by_array[b], sizeof(Ty) * sizeY, hipMemcpyDeviceToHost));
-    }
+    CHECK_HIP_ERROR(hx.transfer_from(dx));
+    CHECK_HIP_ERROR(hy.transfer_from(dy));
 
     if(argus.unit_check)
     {
@@ -135,15 +102,15 @@ hipblasStatus_t testing_axpy_batched_ex_template(Arguments argus)
         =================================================================== */
         for(int b = 0; b < batch_count; b++)
         {
-            cblas_axpy<Tx>(N, alpha, hx_cpu_array[b], incx, hy_cpu_array[b], incy);
+            cblas_axpy<Tx>(N, alpha, hx_cpu[b], incx, hy_cpu[b], incy);
         }
 
         // enable unit check, notice unit check is not invasive, but norm check is,
         // unit check and norm check can not be interchanged their order
         if(argus.unit_check)
         {
-            unit_check_general<Tx>(1, N, batch_count, abs_incx, hx_cpu_array, hx_array);
-            unit_check_general<Ty>(1, N, batch_count, abs_incy, hy_cpu_array, hy_array);
+            unit_check_general<Tx>(1, N, batch_count, abs_incx, hx_cpu, hx);
+            unit_check_general<Ty>(1, N, batch_count, abs_incy, hy_cpu, hy);
         }
 
     } // end of if unit check

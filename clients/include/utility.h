@@ -338,6 +338,15 @@ inline hipblasDoubleComplex random_generator_negative<hipblasDoubleComplex>()
 /* ============================================================================================ */
 /*! \brief Packs strided_batched matricies into groups of 4 in N */
 template <typename T>
+void hipblas_packInt8(T* A, const T* temp, size_t M, size_t N, size_t lda)
+{
+    for(size_t colBase = 0; colBase < N; colBase += 4)
+        for(size_t row = 0; row < lda; row++)
+            for(size_t colOffset = 0; colOffset < 4; colOffset++)
+                A[(colBase * lda + 4 * row) + colOffset] = temp[(colBase + colOffset) * lda + row];
+}
+
+template <typename T>
 void hipblas_packInt8(
     std::vector<T>& A, size_t M, size_t N, size_t lda, size_t batch_count = 1, size_t stride_a = 0)
 {
@@ -376,7 +385,7 @@ void hipblas_init(T* A, int M, int N, int lda, hipblasStride stride = 0, int bat
 }
 
 template <typename T>
-void hipblas_init_alternating_sign(std::vector<T>& A, int M, int N, int lda)
+void hipblas_init_alternating_sign(T* A, int M, int N, int lda)
 {
     // Initialize matrix so adjacent entries have alternating sign.
     // In gemm if either A or B are initialized with alernating
@@ -391,6 +400,12 @@ void hipblas_init_alternating_sign(std::vector<T>& A, int M, int N, int lda)
                 A[i + j * lda] = random_generator<T>();
             else
                 A[i + j * lda] = random_generator_negative<T>();
+}
+
+template <typename T>
+void hipblas_init_alternating_sign(std::vector<T>& A, int M, int N, int lda)
+{
+    hipblas_init_alternating_sign(A.data(), M, N, lda);
 }
 
 template <typename T>

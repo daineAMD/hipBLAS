@@ -16,6 +16,8 @@ using namespace std;
 template <typename T1, typename T2>
 hipblasStatus_t testing_asum(const Arguments& argus)
 {
+    bool FORTRAN       = argus.fortran;
+    auto hipblasAsumFn = FORTRAN ? hipblasAsum<T1, T2, true> : hipblasAsum<T1, T2, false>;
 
     int N    = argus.N;
     int incx = argus.incx;
@@ -70,14 +72,14 @@ hipblasStatus_t testing_asum(const Arguments& argus)
 
         status_1 = hipblasSetPointerMode(handle, HIPBLAS_POINTER_MODE_DEVICE);
 
-        status_2 = hipblasAsum<T1, T2>(handle, N, dx, incx, d_rocblas_result);
+        status_2 = hipblasAsumFn(handle, N, dx, incx, d_rocblas_result);
     }
     else
     {
 
         status_1 = hipblasSetPointerMode(handle, HIPBLAS_POINTER_MODE_HOST);
 
-        status_2 = hipblasAsum<T1, T2>(handle, N, dx, incx, &rocblas_result);
+        status_2 = hipblasAsumFn(handle, N, dx, incx, &rocblas_result);
     }
 
     if((status_1 != HIPBLAS_STATUS_SUCCESS) || (status_2 != HIPBLAS_STATUS_SUCCESS))

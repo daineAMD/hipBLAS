@@ -16,6 +16,9 @@ using namespace std;
 template <typename T1, typename T2>
 hipblasStatus_t testing_asum_batched(const Arguments& argus)
 {
+    bool FORTRAN = argus.fortran;
+    auto hipblasAsumBatchedFn
+        = FORTRAN ? hipblasAsumBatched<T1, T2, true> : hipblasAsumBatched<T1, T2, false>;
     int N           = argus.N;
     int incx        = argus.incx;
     int batch_count = argus.batch_count;
@@ -44,32 +47,22 @@ hipblasStatus_t testing_asum_batched(const Arguments& argus)
     hipblasCreate(&handle);
 
     // Naming: dX is in GPU (device) memory. hK is in CPU (host) memory, plz follow this practice
-    host_vector<T1> hx_array[batch_count];
+    host_batch_vector<T1> hx(N, incx, batch_count);
+
     host_vector<T2> h_rocblas_result1(batch_count);
     host_vector<T2> h_rocblas_result2(batch_count);
     host_vector<T2> h_cpu_result(batch_count);
 
-    device_batch_vector<T1>   bx_array(batch_count, sizeX);
-    device_vector<T1*, 0, T1> dx_array(batch_count);
-    device_vector<T2>         d_rocblas_result(batch_count);
+    device_batch_vector<T1> dx(N, incx, batch_count);
+    device_vector<T2>       d_rocblas_result(batch_count);
+    CHECK_HIP_ERROR(dx.memcheck());
 
     int device_pointer = 1;
     int host_pointer   = 1;
 
     // Initial Data on CPU
-    srand(1);
-    for(int b = 0; b < batch_count; b++)
-    {
-        hx_array[b] = host_vector<T1>(sizeX);
-
-        srand(1);
-        hipblas_init<T1>(hx_array[b], 1, N, incx);
-
-        CHECK_HIP_ERROR(
-            hipMemcpy(bx_array[b], hx_array[b], sizeof(T1) * sizeX, hipMemcpyHostToDevice));
-    }
-    CHECK_HIP_ERROR(
-        hipMemcpy(dx_array, bx_array, sizeof(T1*) * batch_count, hipMemcpyHostToDevice));
+    hipblas_init(hx, true);
+    CHECK_HIP_ERROR(dx.transfer_from(hx));
 
     /* =====================================================================
          ROCBLAS
@@ -78,14 +71,14 @@ hipblasStatus_t testing_asum_batched(const Arguments& argus)
     if(device_pointer)
     {
         status_1 = hipblasSetPointerMode(handle, HIPBLAS_POINTER_MODE_DEVICE);
-        status_2
-            = hipblasAsumBatched<T1, T2>(handle, N, dx_array, incx, batch_count, d_rocblas_result);
+        status_2 = hipblasAsumBatchedFn(
+            handle, N, dx.ptr_on_device(), incx, batch_count, d_rocblas_result);
     }
     if(host_pointer)
     {
         status_3 = hipblasSetPointerMode(handle, HIPBLAS_POINTER_MODE_HOST);
-        status_4
-            = hipblasAsumBatched<T1, T2>(handle, N, dx_array, incx, batch_count, h_rocblas_result1);
+        status_4 = hipblasAsumBatchedFn(
+            handle, N, dx.ptr_on_device(), incx, batch_count, h_rocblas_result1);
     }
 
     if((status_1 != HIPBLAS_STATUS_SUCCESS)
@@ -114,7 +107,7 @@ hipblasStatus_t testing_asum_batched(const Arguments& argus)
         =================================================================== */
         for(int b = 0; b < batch_count; b++)
         {
-            cblas_asum<T1, T2>(N, hx_array[b], incx, &(h_cpu_result[b]));
+            cblas_asum<T1, T2>(N, hx[b], incx, &(h_cpu_result[b]));
         }
 
         if(argus.unit_check)

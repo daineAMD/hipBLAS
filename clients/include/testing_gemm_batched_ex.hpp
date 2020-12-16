@@ -96,83 +96,68 @@ hipblasStatus_t testing_gemm_batched_ex_template(hipblasOperation_t transA,
     const size_t size_B = static_cast<size_t>(ldb) * static_cast<size_t>(B_col);
     const size_t size_C = static_cast<size_t>(ldc) * static_cast<size_t>(N);
 
-    device_vector<Ta*, 0, Ta> dA(batch_count);
-    device_vector<Tb*, 0, Tb> dB(batch_count);
-    device_vector<Tc*, 0, Tc> dC(batch_count);
-    device_vector<Tex>        d_alpha_Tc(1);
-    device_vector<Tex>        d_beta_Tc(1);
+    device_batch_vector<Ta> dA(size_A, 1, batch_count);
+    device_batch_vector<Tb> dB(size_B, 1, batch_count);
+    device_batch_vector<Tc> dC(size_C, 1, batch_count);
+    device_vector<Tex>      d_alpha_Tc(1);
+    device_vector<Tex>      d_beta_Tc(1);
 
-    device_batch_vector<Ta> bA(batch_count, size_A);
-    device_batch_vector<Tb> bB(batch_count, size_B);
-    device_batch_vector<Tc> bC(batch_count, size_C);
-
-    int last = batch_count - 1;
-    if(!dA || !dB || !dC || !bA[last] || !bB[last] || !bC[last])
-    {
-        PRINT_IF_HIP_ERROR(hipErrorOutOfMemory);
-        return HIPBLAS_STATUS_ALLOC_FAILED;
-    }
+    CHECK_HIP_ERROR(dA.memcheck());
+    CHECK_HIP_ERROR(dB.memcheck());
+    CHECK_HIP_ERROR(dC.memcheck());
 
     hipblasHandle_t handle;
     hipblasStatus_t status = HIPBLAS_STATUS_SUCCESS;
     hipblasCreate(&handle);
 
     // Naming: dX is in GPU (device) memory. hK is in CPU (host) memory
-    host_vector<Ta> hA[batch_count];
-    host_vector<Tb> hB[batch_count];
-    host_vector<Tc> hC[batch_count];
-    host_vector<Tc> hC_gold[batch_count];
+    host_batch_vector<Ta> hA(size_A, 1, batch_count);
+    host_batch_vector<Tb> hB(size_B, 1, batch_count);
+    host_batch_vector<Tc> hC(size_C, 1, batch_count);
+    host_batch_vector<Tc> hC_gold(size_C, 1, batch_count);
 
     // Initial Data on CPU
-    srand(1);
+    hipblas_init(hA, true);
     for(int b = 0; b < batch_count; b++)
-    {
-        hA[b]      = host_vector<Ta>(size_A);
-        hB[b]      = host_vector<Tb>(size_B);
-        hC[b]      = host_vector<Tc>(size_C);
-        hC_gold[b] = host_vector<Tc>(size_C);
-
-        hipblas_init<Ta>(hA[b], A_row, A_col, lda);
         hipblas_init_alternating_sign<Tb>(hB[b], B_row, B_col, ldb);
-        hipblas_init<Tc>(hC[b], M, N, ldc);
+    hipblas_init(hC, false);
+    hC_gold.copy_from(hC);
 
-        hC_gold[b] = hC[b];
+    CHECK_HIP_ERROR(dC.transfer_from(hC));
 #ifdef __HIP_PLATFORM_NVCC__
-        CHECK_HIP_ERROR(hipMemcpy(bA[b], hA[b].data(), sizeof(Ta) * size_A, hipMemcpyHostToDevice));
-        CHECK_HIP_ERROR(hipMemcpy(bB[b], hB[b].data(), sizeof(Tb) * size_B, hipMemcpyHostToDevice));
+    CHECK_HIP_ERROR(dA.transfer_from(hA));
+    CHECK_HIP_ERROR(dB.transfer_from(hB));
 #else
-        if(std::is_same<Ta, int8_t>{} && transA == HIPBLAS_OP_N)
-        {
-            vector<Ta> hA_packed(hA[b]);
-            hipblas_packInt8(hA_packed, M, K, lda);
-            CHECK_HIP_ERROR(
-                hipMemcpy(bA[b], hA_packed.data(), sizeof(Ta) * size_A, hipMemcpyHostToDevice));
-        }
-        else
-        {
-            CHECK_HIP_ERROR(
-                hipMemcpy(bA[b], hA[b].data(), sizeof(Ta) * size_A, hipMemcpyHostToDevice));
-        }
+    if(std::is_same<Ta, int8_t>{} && transA == HIPBLAS_OP_N)
+    {
+        host_batch_vector<Ta> hA_packed(size_A, 1, batch_count);
+        hA_packed.copy_from(hA);
 
-        if(std::is_same<Tb, int8_t>{} && transB != HIPBLAS_OP_N)
-        {
-            vector<Tb> hB_packed(hB[b]);
-            hipblas_packInt8(hB_packed, N, K, ldb);
-            CHECK_HIP_ERROR(
-                hipMemcpy(bB[b], hB_packed.data(), sizeof(Tb) * size_B, hipMemcpyHostToDevice));
-        }
-        else
-        {
-            CHECK_HIP_ERROR(
-                hipMemcpy(bB[b], hB[b].data(), sizeof(Tb) * size_B, hipMemcpyHostToDevice));
-        }
-#endif
-        CHECK_HIP_ERROR(hipMemcpy(bC[b], hC[b].data(), sizeof(Tc) * size_C, hipMemcpyHostToDevice));
+        for(int b = 0; b < batch_count; b++)
+            hipblas_packInt8(hA_packed[b], hA[b], M, K, lda);
+
+        CHECK_HIP_ERROR(dA.transfer_from(hA_packed));
+    }
+    else
+    {
+        CHECK_HIP_ERROR(dA.transfer_from(hA));
     }
 
-    CHECK_HIP_ERROR(hipMemcpy(dA, bA, sizeof(Ta*) * batch_count, hipMemcpyHostToDevice));
-    CHECK_HIP_ERROR(hipMemcpy(dB, bB, sizeof(Tb*) * batch_count, hipMemcpyHostToDevice));
-    CHECK_HIP_ERROR(hipMemcpy(dC, bC, sizeof(Tc*) * batch_count, hipMemcpyHostToDevice));
+    if(std::is_same<Tb, int8_t>{} && transB != HIPBLAS_OP_N)
+    {
+        host_batch_vector<Tb> hB_packed(size_B, 1, batch_count);
+        hB_packed.copy_from(hB);
+
+        for(int b = 0; b < batch_count; b++)
+            hipblas_packInt8(hB_packed[b], hB[b], N, K, ldb);
+
+        CHECK_HIP_ERROR(dB.transfer_from(hB_packed));
+    }
+    else
+    {
+        CHECK_HIP_ERROR(dB.transfer_from(hB));
+    }
+#endif
 
     status = hipblasGemmBatchedExFn(handle,
                                     transA,
@@ -181,14 +166,14 @@ hipblasStatus_t testing_gemm_batched_ex_template(hipblasOperation_t transA,
                                     N,
                                     K,
                                     &h_alpha_Tc,
-                                    (const void**)(Ta**)dA,
+                                    (const void**)(Ta**)dA.ptr_on_device(),
                                     a_type,
                                     lda,
-                                    (const void**)(Tb**)dB,
+                                    (const void**)(Tb**)dB.ptr_on_device(),
                                     b_type,
                                     ldb,
                                     &h_beta_Tc,
-                                    (void**)(Tc**)dC,
+                                    (void**)(Tc**)dC.ptr_on_device(),
                                     c_type,
                                     ldc,
                                     batch_count,
@@ -202,10 +187,7 @@ hipblasStatus_t testing_gemm_batched_ex_template(hipblasOperation_t transA,
         return status;
     }
 
-    for(int b = 0; b < batch_count; b++)
-    {
-        CHECK_HIP_ERROR(hipMemcpy(hC[b].data(), bC[b], sizeof(Tc) * size_C, hipMemcpyDeviceToHost));
-    }
+    CHECK_HIP_ERROR(hC.transfer_from(dC));
 
     // CPU BLAS
     for(int b = 0; b < batch_count; b++)
@@ -216,12 +198,12 @@ hipblasStatus_t testing_gemm_batched_ex_template(hipblasOperation_t transA,
                                 N,
                                 K,
                                 h_alpha_Tc,
-                                hA[b].data(),
+                                hA[b],
                                 lda,
-                                hB[b].data(),
+                                hB[b],
                                 ldb,
                                 h_beta_Tc,
-                                hC_gold[b].data(),
+                                hC_gold[b],
                                 ldc);
     }
 
@@ -230,7 +212,7 @@ hipblasStatus_t testing_gemm_batched_ex_template(hipblasOperation_t transA,
     if(unit_check)
     {
         for(int b = 0; b < batch_count; b++)
-            unit_check_general<Tc>(M, N, ldc, hC_gold[b].data(), hC[b].data());
+            unit_check_general<Tc>(M, N, ldc, hC_gold[b], hC[b]);
     }
 
     hipblasDestroy(handle);

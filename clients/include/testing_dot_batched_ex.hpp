@@ -49,24 +49,18 @@ hipblasStatus_t testing_dot_batched_ex_template(Arguments argus)
     int sizeY = N * incy;
 
     // Naming: dX is in GPU (device) memory. hK is in CPU (host) memory, plz follow this practice
-    host_vector<Tx> hx[batch_count];
-    host_vector<Ty> hy[batch_count];
-    host_vector<Tr> h_cpu_result(batch_count);
-    host_vector<Tr> h_rocblas_result1(batch_count);
-    host_vector<Tr> h_rocblas_result2(batch_count);
+    host_batch_vector<Tx> hx(N, incx, batch_count);
+    host_batch_vector<Ty> hy(N, incy, batch_count);
+    host_vector<Tr>       h_cpu_result(batch_count);
+    host_vector<Tr>       h_rocblas_result1(batch_count);
+    host_vector<Tr>       h_rocblas_result2(batch_count);
 
-    device_batch_vector<Tx> bx(batch_count, sizeX);
-    device_batch_vector<Ty> by(batch_count, sizeY);
+    device_batch_vector<Tx> dx(N, incx, batch_count);
+    device_batch_vector<Ty> dy(N, incy, batch_count);
+    device_vector<Tr>       d_rocblas_result(batch_count);
 
-    device_vector<Tx*, 0, Tx> dx(batch_count);
-    device_vector<Ty*, 0, Ty> dy(batch_count);
-    device_vector<Tr>         d_rocblas_result(batch_count);
-
-    int last = batch_count - 1;
-    if(!dx || !dy || !d_rocblas_result || (!bx[last] && sizeX) || (!by[last] && sizeY))
-    {
-        return HIPBLAS_STATUS_ALLOC_FAILED;
-    }
+    CHECK_HIP_ERROR(dx.memcheck());
+    CHECK_HIP_ERROR(dy.memcheck());
 
     int device_pointer = 1;
     int host_pointer   = 1;
@@ -78,24 +72,13 @@ hipblasStatus_t testing_dot_batched_ex_template(Arguments argus)
     hipblasCreate(&handle);
 
     // Initial Data on CPU
-    srand(1);
-    for(int b = 0; b < batch_count; b++)
-    {
-        hx[b] = host_vector<Tx>(sizeX);
-        hy[b] = host_vector<Ty>(sizeY);
-
-        srand(1);
-        hipblas_init_alternating_sign<Tx>(hx[b], 1, N, incx);
-        hipblas_init<Ty>(hy[b], 1, N, incy);
-
-        CHECK_HIP_ERROR(hipMemcpy(bx[b], hx[b], sizeof(Tx) * sizeX, hipMemcpyHostToDevice));
-        CHECK_HIP_ERROR(hipMemcpy(by[b], hy[b], sizeof(Ty) * sizeY, hipMemcpyHostToDevice));
-    }
-    CHECK_HIP_ERROR(hipMemcpy(dx, bx, batch_count * sizeof(Tx*), hipMemcpyHostToDevice));
-    CHECK_HIP_ERROR(hipMemcpy(dy, by, batch_count * sizeof(Ty*), hipMemcpyHostToDevice));
+    hipblas_init(hx, true);
+    hipblas_init(hy, false);
+    CHECK_HIP_ERROR(dx.transfer_from(hx));
+    CHECK_HIP_ERROR(dy.transfer_from(hy));
 
     /* =====================================================================
-         ROCBLAS
+         HIPBLAS
     =================================================================== */
     // hipblasDot accept both dev/host pointer for the scalar
     if(host_pointer)
@@ -103,10 +86,10 @@ hipblasStatus_t testing_dot_batched_ex_template(Arguments argus)
         hipblasSetPointerMode(handle, HIPBLAS_POINTER_MODE_DEVICE);
         status_1 = (hipblasDotBatchedExFn)(handle,
                                            N,
-                                           dx,
+                                           dx.ptr_on_device(),
                                            xType,
                                            incx,
-                                           dy,
+                                           dy.ptr_on_device(),
                                            yType,
                                            incy,
                                            batch_count,
@@ -120,10 +103,10 @@ hipblasStatus_t testing_dot_batched_ex_template(Arguments argus)
         hipblasSetPointerMode(handle, HIPBLAS_POINTER_MODE_HOST);
         status_2 = (hipblasDotBatchedExFn)(handle,
                                            N,
-                                           dx,
+                                           dx.ptr_on_device(),
                                            xType,
                                            incx,
-                                           dy,
+                                           dy.ptr_on_device(),
                                            yType,
                                            incy,
                                            batch_count,

@@ -16,6 +16,10 @@ using namespace std;
 template <typename T1, typename T2>
 hipblasStatus_t testing_asum_strided_batched(const Arguments& argus)
 {
+    bool FORTRAN                     = argus.fortran;
+    auto hipblasAsumStridedBatchedFn = FORTRAN ? hipblasAsumStridedBatched<T1, T2, true>
+                                               : hipblasAsumStridedBatched<T1, T2, false>;
+
     int    N            = argus.N;
     int    incx         = argus.incx;
     double stride_scale = argus.stride_scale;
@@ -73,14 +77,14 @@ hipblasStatus_t testing_asum_strided_batched(const Arguments& argus)
     if(device_pointer)
     {
         status_1 = hipblasSetPointerMode(handle, HIPBLAS_POINTER_MODE_DEVICE);
-        status_2 = hipblasAsumStridedBatched<T1, T2>(
+        status_2 = hipblasAsumStridedBatchedFn(
             handle, N, dx, incx, stridex, batch_count, d_rocblas_result);
     }
 
     if(host_pointer)
     {
         status_3 = hipblasSetPointerMode(handle, HIPBLAS_POINTER_MODE_HOST);
-        status_4 = hipblasAsumStridedBatched<T1, T2>(
+        status_4 = hipblasAsumStridedBatchedFn(
             handle, N, dx, incx, stridex, batch_count, rocblas_result1);
     }
 

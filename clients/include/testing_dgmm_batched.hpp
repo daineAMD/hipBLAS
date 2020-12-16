@@ -48,27 +48,21 @@ hipblasStatus_t testing_dgmm_batched(const Arguments& argus)
     }
 
     // Naming: dK is in GPU (device) memory. hK is in CPU (host) memory
-    host_vector<T> hA[batch_count];
-    host_vector<T> hA_copy[batch_count];
-    host_vector<T> hx[batch_count];
-    host_vector<T> hx_copy[batch_count];
-    host_vector<T> hC[batch_count];
-    host_vector<T> hC_1[batch_count];
-    host_vector<T> hC_gold[batch_count];
+    host_batch_vector<T> hA(A_size, 1, batch_count);
+    host_batch_vector<T> hA_copy(A_size, 1, batch_count);
+    host_batch_vector<T> hx(X_size, 1, batch_count);
+    host_batch_vector<T> hx_copy(X_size, 1, batch_count);
+    host_batch_vector<T> hC(C_size, 1, batch_count);
+    host_batch_vector<T> hC_1(C_size, 1, batch_count);
+    host_batch_vector<T> hC_gold(C_size, 1, batch_count);
 
-    device_batch_vector<T> bA(batch_count, A_size);
-    device_batch_vector<T> bx(batch_count, X_size);
-    device_batch_vector<T> bC(batch_count, C_size);
+    device_batch_vector<T> dA(A_size, 1, batch_count);
+    device_batch_vector<T> dx(X_size, 1, batch_count);
+    device_batch_vector<T> dC(C_size, 1, batch_count);
 
-    device_vector<T*, 0, T> dA(batch_count);
-    device_vector<T*, 0, T> dx(batch_count);
-    device_vector<T*, 0, T> dC(batch_count);
-
-    int last = batch_count - 1;
-    if(!dA || !dx || !dC || !bA[last] || !bx[last] || !bC[last])
-    {
-        return HIPBLAS_STATUS_ALLOC_FAILED;
-    }
+    CHECK_HIP_ERROR(dA.memcheck());
+    CHECK_HIP_ERROR(dx.memcheck());
+    CHECK_HIP_ERROR(dC.memcheck());
 
     double gpu_time_used, cpu_time_used;
     double hipblasGflops, cblas_gflops, hipblasBandwidth;
@@ -77,41 +71,33 @@ hipblasStatus_t testing_dgmm_batched(const Arguments& argus)
     hipblasHandle_t handle;
     hipblasCreate(&handle);
 
-    // Initial Data on CPU
-    srand(1);
-    for(int b = 0; b < batch_count; b++)
-    {
-        hA[b]      = host_vector<T>(A_size);
-        hA_copy[b] = host_vector<T>(A_size);
-        hx[b]      = host_vector<T>(X_size);
-        hx_copy[b] = host_vector<T>(X_size);
-        hC[b]      = host_vector<T>(C_size);
-        hC_1[b]    = host_vector<T>(C_size);
-        hC_gold[b] = host_vector<T>(C_size);
+    hipblas_init(hA, true);
+    hipblas_init(hx, false);
+    hipblas_init(hC, false);
 
-        srand(1);
-        hipblas_init<T>(hA[b], M, N, lda);
-        hipblas_init<T>(hx[b], 1, k, incx);
-        hipblas_init<T>(hC[b], M, N, ldc);
+    hA_copy.copy_from(hA);
+    hx_copy.copy_from(hx);
+    hC_1.copy_from(hC);
+    hC_gold.copy_from(hC);
 
-        hA_copy[b] = hA[b];
-        hx_copy[b] = hx[b];
-        hC_1[b]    = hC[b];
-        hC_gold[b] = hC[b];
-
-        hipMemcpy(bA[b], hA[b].data(), sizeof(T) * A_size, hipMemcpyHostToDevice);
-        hipMemcpy(bx[b], hx[b].data(), sizeof(T) * X_size, hipMemcpyHostToDevice);
-        hipMemcpy(bC[b], hC[b].data(), sizeof(T) * C_size, hipMemcpyHostToDevice);
-    }
-
-    hipMemcpy(dA, bA, sizeof(T*) * batch_count, hipMemcpyHostToDevice);
-    hipMemcpy(dx, bx, sizeof(T*) * batch_count, hipMemcpyHostToDevice);
-    hipMemcpy(dC, bC, sizeof(T*) * batch_count, hipMemcpyHostToDevice);
+    CHECK_HIP_ERROR(dA.transfer_from(hA));
+    CHECK_HIP_ERROR(dx.transfer_from(hx));
+    CHECK_HIP_ERROR(dC.transfer_from(hC));
 
     /* =====================================================================
-           ROCBLAS
+           HIPBLAS
     =================================================================== */
-    status = hipblasDgmmBatchedFn(handle, side, M, N, dA, lda, dx, incx, dC, ldc, batch_count);
+    status = hipblasDgmmBatchedFn(handle,
+                                  side,
+                                  M,
+                                  N,
+                                  dA.ptr_on_device(),
+                                  lda,
+                                  dx.ptr_on_device(),
+                                  incx,
+                                  dC.ptr_on_device(),
+                                  ldc,
+                                  batch_count);
 
     if(status != HIPBLAS_STATUS_SUCCESS)
     {
@@ -119,9 +105,7 @@ hipblasStatus_t testing_dgmm_batched(const Arguments& argus)
         return status;
     }
 
-    // copy output from device to CPU
-    for(int b = 0; b < batch_count; b++)
-        hipMemcpy(hC_1[b].data(), bC[b], sizeof(T) * C_size, hipMemcpyDeviceToHost);
+    CHECK_HIP_ERROR(hC_1.transfer_from(dC));
 
     if(argus.unit_check)
     {
