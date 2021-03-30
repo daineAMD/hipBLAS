@@ -372,6 +372,9 @@ struct perf_blas<T, U, std::enable_if_t<std::is_same<T, float>{} || std::is_same
             {"spmv", testing_spmv<T>},
             {"spmv_batched", testing_spmv_batched<T>},
             {"spmv_strided_batched", testing_spmv_strided_batched<T>},
+            {"symv", testing_symv<T>},
+            {"symv_batched", testing_symv_batched<T>},
+            {"symv_strided_batched", testing_symv_strided_batched<T>},
             /*{"set_get_vector", testing_set_get_vector<T>},
                 {"set_get_matrix", testing_set_get_matrix<T>},
                 {"set_get_matrix_async", testing_set_get_matrix_async<T>},
@@ -390,9 +393,7 @@ struct perf_blas<T, U, std::enable_if_t<std::is_same<T, float>{} || std::is_same
                 {"syr2_strided_batched", testing_syr2_strided_batched<T>},
 
 
-                {"symv", testing_symv<T>},
-                {"symv_batched", testing_symv_batched<T>},
-                {"symv_strided_batched", testing_symv_strided_batched<T>},
+
                 {"tbmv", testing_tbmv<T>},
                 {"tbmv_batched", testing_tbmv_batched<T>},
                 {"tbmv_strided_batched", testing_tbmv_strided_batched<T>},
@@ -567,6 +568,9 @@ struct perf_blas<
             {"hpr2", testing_hpr2<T>},
             {"hpr2_batched", testing_hpr2_batched<T>},
             {"hpr2_strided_batched", testing_hpr2_strided_batched<T>},
+            {"symv", testing_symv<T>},
+            {"symv_batched", testing_symv_batched<T>},
+            {"symv_strided_batched", testing_symv_strided_batched<T>},
             /*
                 // L2
                 {"spr", testing_spr<T>},
@@ -585,9 +589,7 @@ struct perf_blas<
                 {"tpmv_batched", testing_tpmv_batched<T>},
                 {"tpmv_strided_batched", testing_tpmv_strided_batched<T>},
 
-                {"symv", testing_symv<T>},
-                {"symv_batched", testing_symv_batched<T>},
-                {"symv_strided_batched", testing_symv_strided_batched<T>},
+
                 {"trmv", testing_trmv<T>},
                 {"trmv_batched", testing_trmv_batched<T>},
                 {"trmv_strided_batched", testing_trmv_strided_batched<T>},
