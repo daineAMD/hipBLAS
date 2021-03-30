@@ -40,16 +40,16 @@ Yet, the goal of this file is to verify result correctness not argument-checkers
 Representative sampling is sufficient, endless brute-force sampling is not necessary
 =================================================================== */
 
-// vector of vector, each vector is a {M, N, lda};
+// vector of vector, each vector is a {N, lda};
 // add/delete as a group
 const vector<vector<int>> matrix_size_range = {
-    {-1, -1, -1}, {11, 11, 11}, {16, 16, 16}, {32, 32, 32}, {65, 65, 65}
-    //   {10, 10, 2},
-    //   {600,500, 500},
-    //   {1000, 1000, 1000},
-    //   {2000, 2000, 2000},
-    //   {4011, 4011, 4011},
-    //   {8000, 8000, 8000}
+    {-1, -1}, {11, 11}, {16, 16}, {32, 32}, {65, 65}
+    //   {10, 2},
+    //   {500, 500},
+    //   {1000, 1000},
+    //   {2000, 2000},
+    //   {4011, 4011},
+    //   {8000, 8000}
 };
 
 // vector of vector, each element is an {incx}
@@ -95,9 +95,8 @@ Arguments setup_syr_arguments(syr_tuple tup)
     Arguments arg;
 
     // see the comments about matrix_size_range above
-    arg.M   = matrix_size[0];
-    arg.N   = matrix_size[1];
-    arg.lda = matrix_size[2];
+    arg.N   = matrix_size[0];
+    arg.lda = matrix_size[1];
 
     // see the comments about matrix_size_range above
     arg.incx = incx[0];
@@ -138,7 +137,7 @@ TEST_P(blas2_syr_gtest, syr_gtest_float)
     // if not success, then the input argument is problematic, so detect the error message
     if(status != HIPBLAS_STATUS_SUCCESS)
     {
-        if(arg.M < 0 || arg.N < 0 || arg.lda < arg.M || arg.incx <= 0 || arg.incy <= 0)
+        if(arg.N < 0 || arg.lda < arg.N || arg.incx <= 0 || arg.incy <= 0)
         {
             EXPECT_EQ(HIPBLAS_STATUS_INVALID_VALUE, status);
         }
@@ -163,7 +162,7 @@ TEST_P(blas2_syr_gtest, syr_gtest_float_complex)
     // if not success, then the input argument is problematic, so detect the error message
     if(status != HIPBLAS_STATUS_SUCCESS)
     {
-        if(arg.M < 0 || arg.N < 0 || arg.lda < arg.M || arg.incx <= 0 || arg.incy <= 0)
+        if(arg.N < 0 || arg.lda < arg.N || arg.incx <= 0 || arg.incy <= 0)
         {
             EXPECT_EQ(HIPBLAS_STATUS_INVALID_VALUE, status);
         }
@@ -191,8 +190,7 @@ TEST_P(blas2_syr_gtest, syr_batched_gtest_float)
     // if not success, then the input argument is problematic, so detect the error message
     if(status != HIPBLAS_STATUS_SUCCESS)
     {
-        if(arg.M < 0 || arg.N < 0 || arg.lda < arg.M || arg.incx <= 0 || arg.incy <= 0
-           || arg.batch_count < 0)
+        if(arg.N < 0 || arg.lda < arg.N || arg.incx <= 0 || arg.incy <= 0 || arg.batch_count < 0)
         {
             EXPECT_EQ(HIPBLAS_STATUS_INVALID_VALUE, status);
         }
@@ -217,8 +215,7 @@ TEST_P(blas2_syr_gtest, syr_batched_gtest_float_complex)
     // if not success, then the input argument is problematic, so detect the error message
     if(status != HIPBLAS_STATUS_SUCCESS)
     {
-        if(arg.M < 0 || arg.N < 0 || arg.lda < arg.M || arg.incx <= 0 || arg.incy <= 0
-           || arg.batch_count < 0)
+        if(arg.N < 0 || arg.lda < arg.N || arg.incx <= 0 || arg.incy <= 0 || arg.batch_count < 0)
         {
             EXPECT_EQ(HIPBLAS_STATUS_INVALID_VALUE, status);
         }
@@ -244,8 +241,7 @@ TEST_P(blas2_syr_gtest, syr_strided_batched_gtest_float)
     // if not success, then the input argument is problematic, so detect the error message
     if(status != HIPBLAS_STATUS_SUCCESS)
     {
-        if(arg.M < 0 || arg.N < 0 || arg.lda < arg.M || arg.incx <= 0 || arg.incy <= 0
-           || arg.batch_count < 0)
+        if(arg.N < 0 || arg.lda < arg.N || arg.incx <= 0 || arg.incy <= 0 || arg.batch_count < 0)
         {
             EXPECT_EQ(HIPBLAS_STATUS_INVALID_VALUE, status);
         }
@@ -270,8 +266,7 @@ TEST_P(blas2_syr_gtest, syr_strided_batched_gtest_float_complex)
     // if not success, then the input argument is problematic, so detect the error message
     if(status != HIPBLAS_STATUS_SUCCESS)
     {
-        if(arg.M < 0 || arg.N < 0 || arg.lda < arg.M || arg.incx <= 0 || arg.incy <= 0
-           || arg.batch_count < 0)
+        if(arg.N < 0 || arg.lda < arg.N || arg.incx <= 0 || arg.incy <= 0 || arg.batch_count < 0)
         {
             EXPECT_EQ(HIPBLAS_STATUS_INVALID_VALUE, status);
         }
@@ -287,7 +282,7 @@ TEST_P(blas2_syr_gtest, syr_strided_batched_gtest_float_complex)
 // notice we are using vector of vector
 // so each elment in xxx_range is a avector,
 // ValuesIn take each element (a vector) and combine them and feed them to test_p
-// The combinations are  { {M, N, lda}, {incx,incy} {alpha} }
+// The combinations are  { {N, lda}, {incx,incy} {alpha} }
 
 INSTANTIATE_TEST_SUITE_P(hipblasSyr,
                          blas2_syr_gtest,
