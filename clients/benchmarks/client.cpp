@@ -375,6 +375,9 @@ struct perf_blas<T, U, std::enable_if_t<std::is_same<T, float>{} || std::is_same
             {"spr", testing_spr<T>},
             {"spr_batched", testing_spr_batched<T>},
             {"spr_strided_batched", testing_spr_strided_batched<T>},
+            {"spr2", testing_spr2<T>},
+            {"spr2_batched", testing_spr2_batched<T>},
+            {"spr2_strided_batched", testing_spr2_strided_batched<T>},
             {"symv", testing_symv<T>},
             {"symv_batched", testing_symv_batched<T>},
             {"symv_strided_batched", testing_symv_strided_batched<T>},
@@ -383,9 +386,7 @@ struct perf_blas<T, U, std::enable_if_t<std::is_same<T, float>{} || std::is_same
                 {"set_get_matrix_async", testing_set_get_matrix_async<T>},
                 // L2
 
-                {"spr2", testing_spr2<T>},
-                {"spr2_batched", testing_spr2_batched<T>},
-                {"spr2_strided_batched", testing_spr2_strided_batched<T>},
+
                 {"syr", testing_syr<T>},
                 {"syr_batched", testing_syr_batched<T>},
                 {"syr_strided_batched", testing_syr_strided_batched<T>},
