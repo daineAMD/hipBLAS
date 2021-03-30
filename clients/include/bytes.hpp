@@ -186,6 +186,13 @@ constexpr double hpr2_gbyte_count(int n)
     return (sizeof(T) * (tri_count(n) + 2.0 * n)) / 1e9;
 }
 
+/* \brief byte  counts of SPR */
+template <typename T>
+constexpr double spr_gbyte_count(int n)
+{
+    return (sizeof(T) * (2.0 * n * (n + 1)) / 2) / 1e9;
+}
+
 /* \brief byte counts of SYMV */
 template <typename T>
 constexpr double symv_gbyte_count(int n)
