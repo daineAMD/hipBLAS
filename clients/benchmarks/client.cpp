@@ -369,6 +369,9 @@ struct perf_blas<T, U, std::enable_if_t<std::is_same<T, float>{} || std::is_same
             {"sbmv", testing_sbmv<T>},
             {"sbmv_batched", testing_sbmv_batched<T>},
             {"sbmv_strided_batched", testing_sbmv_strided_batched<T>},
+            {"spmv", testing_spmv<T>},
+            {"spmv_batched", testing_spmv_batched<T>},
+            {"spmv_strided_batched", testing_spmv_strided_batched<T>},
             /*{"set_get_vector", testing_set_get_vector<T>},
                 {"set_get_matrix", testing_set_get_matrix<T>},
                 {"set_get_matrix_async", testing_set_get_matrix_async<T>},
@@ -386,9 +389,7 @@ struct perf_blas<T, U, std::enable_if_t<std::is_same<T, float>{} || std::is_same
                 {"syr2_batched", testing_syr2_batched<T>},
                 {"syr2_strided_batched", testing_syr2_strided_batched<T>},
 
-                {"spmv", testing_spmv<T>},
-                {"spmv_batched", testing_spmv_batched<T>},
-                {"spmv_strided_batched", testing_spmv_strided_batched<T>},
+
                 {"symv", testing_symv<T>},
                 {"symv_batched", testing_symv_batched<T>},
                 {"symv_strided_batched", testing_symv_strided_batched<T>},
