@@ -16992,29 +16992,17 @@ hipblasStatus_t hipblasHgemmStridedBatched(hipblasHandle_t    handle,
                                            const hipblasHalf* alpha,
                                            const hipblasHalf* A,
                                            int                lda,
-                                           long long          bsa,
+                                           hipblasStride      strideA,
                                            const hipblasHalf* B,
                                            int                ldb,
-                                           long long          bsb,
+                                           hipblasStride      strideB,
                                            const hipblasHalf* beta,
                                            hipblasHalf*       C,
                                            int                ldc,
-                                           long long          bsc,
+                                           hipblasStride      strideC,
                                            int                batchCount)
 try
 {
-    int bsa_int, bsb_int, bsc_int;
-    if(bsa < INT_MAX && bsb < INT_MAX && bsc < INT_MAX)
-    {
-        bsa_int = static_cast<int>(bsa);
-        bsb_int = static_cast<int>(bsb);
-        bsc_int = static_cast<int>(bsc);
-    }
-    else
-    {
-        return HIPBLAS_STATUS_INVALID_VALUE;
-    }
-
     return rocBLASStatusToHIPStatus(
         rocblas_hgemm_strided_batched((rocblas_handle)handle,
                                       hipOperationToHCCOperation(transa),
@@ -17025,14 +17013,14 @@ try
                                       (rocblas_half*)alpha,
                                       (rocblas_half*)A,
                                       lda,
-                                      bsa_int,
+                                      strideA,
                                       (rocblas_half*)B,
                                       ldb,
-                                      bsb_int,
+                                      strideB,
                                       (rocblas_half*)beta,
                                       (rocblas_half*)C,
                                       ldc,
-                                      bsc_int,
+                                      strideC,
                                       batchCount));
 }
 catch(...)
@@ -17049,39 +17037,17 @@ hipblasStatus_t hipblasSgemmStridedBatched(hipblasHandle_t    handle,
                                            const float*       alpha,
                                            const float*       A,
                                            int                lda,
-                                           long long          bsa,
+                                           hipblasStride      strideA,
                                            const float*       B,
                                            int                ldb,
-                                           long long          bsb,
+                                           hipblasStride      strideB,
                                            const float*       beta,
                                            float*             C,
                                            int                ldc,
-                                           long long          bsc,
+                                           hipblasStride      strideC,
                                            int                batchCount)
 try
 {
-    int bsa_int, bsb_int, bsc_int;
-    if(bsa < INT_MAX && bsb < INT_MAX && bsc < INT_MAX)
-        try
-        {
-            bsa_int = static_cast<int>(bsa);
-            bsb_int = static_cast<int>(bsb);
-            bsc_int = static_cast<int>(bsc);
-        }
-        catch(...)
-        {
-            return exception_to_hipblas_status();
-        }
-    else
-        try
-        {
-            return HIPBLAS_STATUS_INVALID_VALUE;
-        }
-        catch(...)
-        {
-            return exception_to_hipblas_status();
-        }
-
     return rocBLASStatusToHIPStatus(
         rocblas_sgemm_strided_batched((rocblas_handle)handle,
                                       hipOperationToHCCOperation(transa),
@@ -17092,14 +17058,14 @@ try
                                       alpha,
                                       A,
                                       lda,
-                                      bsa_int,
+                                      strideA,
                                       B,
                                       ldb,
-                                      bsb_int,
+                                      strideB,
                                       beta,
                                       C,
                                       ldc,
-                                      bsc_int,
+                                      strideC,
                                       batchCount));
 }
 catch(...)
@@ -17116,39 +17082,17 @@ hipblasStatus_t hipblasDgemmStridedBatched(hipblasHandle_t    handle,
                                            const double*      alpha,
                                            const double*      A,
                                            int                lda,
-                                           long long          bsa,
+                                           hipblasStride      strideA,
                                            const double*      B,
                                            int                ldb,
-                                           long long          bsb,
+                                           hipblasStride      strideB,
                                            const double*      beta,
                                            double*            C,
                                            int                ldc,
-                                           long long          bsc,
+                                           hipblasStride      strideC,
                                            int                batchCount)
 try
 {
-    int bsa_int, bsb_int, bsc_int;
-    if(bsa < INT_MAX && bsb < INT_MAX && bsc < INT_MAX)
-        try
-        {
-            bsa_int = static_cast<int>(bsa);
-            bsb_int = static_cast<int>(bsb);
-            bsc_int = static_cast<int>(bsc);
-        }
-        catch(...)
-        {
-            return exception_to_hipblas_status();
-        }
-    else
-        try
-        {
-            return HIPBLAS_STATUS_INVALID_VALUE;
-        }
-        catch(...)
-        {
-            return exception_to_hipblas_status();
-        }
-
     return rocBLASStatusToHIPStatus(
         rocblas_dgemm_strided_batched((rocblas_handle)handle,
                                       hipOperationToHCCOperation(transa),
@@ -17159,14 +17103,14 @@ try
                                       alpha,
                                       A,
                                       lda,
-                                      bsa_int,
+                                      strideA,
                                       B,
                                       ldb,
-                                      bsb_int,
+                                      strideB,
                                       beta,
                                       C,
                                       ldc,
-                                      bsc_int,
+                                      strideC,
                                       batchCount));
 }
 catch(...)
@@ -17183,39 +17127,17 @@ hipblasStatus_t hipblasCgemmStridedBatched(hipblasHandle_t       handle,
                                            const hipblasComplex* alpha,
                                            const hipblasComplex* A,
                                            int                   lda,
-                                           long long             bsa,
+                                           hipblasStride         strideA,
                                            const hipblasComplex* B,
                                            int                   ldb,
-                                           long long             bsb,
+                                           hipblasStride         strideB,
                                            const hipblasComplex* beta,
                                            hipblasComplex*       C,
                                            int                   ldc,
-                                           long long             bsc,
+                                           hipblasStride         strideC,
                                            int                   batchCount)
 try
 {
-    int bsa_int, bsb_int, bsc_int;
-    if(bsa < INT_MAX && bsb < INT_MAX && bsc < INT_MAX)
-        try
-        {
-            bsa_int = static_cast<int>(bsa);
-            bsb_int = static_cast<int>(bsb);
-            bsc_int = static_cast<int>(bsc);
-        }
-        catch(...)
-        {
-            return exception_to_hipblas_status();
-        }
-    else
-        try
-        {
-            return HIPBLAS_STATUS_INVALID_VALUE;
-        }
-        catch(...)
-        {
-            return exception_to_hipblas_status();
-        }
-
     return rocBLASStatusToHIPStatus(
         rocblas_cgemm_strided_batched((rocblas_handle)handle,
                                       hipOperationToHCCOperation(transa),
@@ -17226,14 +17148,14 @@ try
                                       (rocblas_float_complex*)alpha,
                                       (rocblas_float_complex*)A,
                                       lda,
-                                      bsa_int,
+                                      strideA,
                                       (rocblas_float_complex*)B,
                                       ldb,
-                                      bsb_int,
+                                      strideB,
                                       (rocblas_float_complex*)beta,
                                       (rocblas_float_complex*)C,
                                       ldc,
-                                      bsc_int,
+                                      strideC,
                                       batchCount));
 }
 catch(...)
@@ -17250,39 +17172,17 @@ hipblasStatus_t hipblasZgemmStridedBatched(hipblasHandle_t             handle,
                                            const hipblasDoubleComplex* alpha,
                                            const hipblasDoubleComplex* A,
                                            int                         lda,
-                                           long long                   bsa,
+                                           hipblasStride               strideA,
                                            const hipblasDoubleComplex* B,
                                            int                         ldb,
-                                           long long                   bsb,
+                                           hipblasStride               strideB,
                                            const hipblasDoubleComplex* beta,
                                            hipblasDoubleComplex*       C,
                                            int                         ldc,
-                                           long long                   bsc,
+                                           hipblasStride               strideC,
                                            int                         batchCount)
 try
 {
-    int bsa_int, bsb_int, bsc_int;
-    if(bsa < INT_MAX && bsb < INT_MAX && bsc < INT_MAX)
-        try
-        {
-            bsa_int = static_cast<int>(bsa);
-            bsb_int = static_cast<int>(bsb);
-            bsc_int = static_cast<int>(bsc);
-        }
-        catch(...)
-        {
-            return exception_to_hipblas_status();
-        }
-    else
-        try
-        {
-            return HIPBLAS_STATUS_INVALID_VALUE;
-        }
-        catch(...)
-        {
-            return exception_to_hipblas_status();
-        }
-
     return rocBLASStatusToHIPStatus(
         rocblas_zgemm_strided_batched((rocblas_handle)handle,
                                       hipOperationToHCCOperation(transa),
@@ -17293,14 +17193,14 @@ try
                                       (rocblas_double_complex*)alpha,
                                       (rocblas_double_complex*)A,
                                       lda,
-                                      bsa_int,
+                                      strideA,
                                       (rocblas_double_complex*)B,
                                       ldb,
-                                      bsb_int,
+                                      strideB,
                                       (rocblas_double_complex*)beta,
                                       (rocblas_double_complex*)C,
                                       ldc,
-                                      bsc_int,
+                                      strideC,
                                       batchCount));
 }
 catch(...)
