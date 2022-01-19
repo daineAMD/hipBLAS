@@ -524,14 +524,14 @@ TEST_P(parameterized_gemm_batched_ex, standard_strided_batched)
 //     virtual void TearDown() {}
 // };
 
-// INSTANTIATE_TEST_SUITE_P(quick_blas_ex_small_int8,
-//                          parameterized_gemm_ex,
-//                          Combine(ValuesIn(int8_matrix_size_range),
-//                                  ValuesIn(alpha_beta_range_int8),
-//                                  ValuesIn(transA_transB_range),
-//                                  ValuesIn(precision_int8),
-//                                  ValuesIn(batch_count_range_small),
-//                                  ValuesIn(is_fortran)));
+INSTANTIATE_TEST_SUITE_P(quick_blas_ex_small_int8,
+                         parameterized_gemm_ex,
+                         Combine(ValuesIn(int8_matrix_size_range),
+                                 ValuesIn(alpha_beta_range_int8),
+                                 ValuesIn(transA_transB_range),
+                                 ValuesIn(precision_int8),
+                                 ValuesIn(batch_count_range_small),
+                                 ValuesIn(is_fortran)));
 
 // TEST(pre_checkin_blas_ex_bad_arg, float) { testing_gemm_ex_bad_arg(); }
 
@@ -682,11 +682,11 @@ INSTANTIATE_TEST_SUITE_P(quick_blas_batched_ex_small_double_complex,
                                  ValuesIn(batch_count_range),
                                  ValuesIn(is_fortran)));
 
-// INSTANTIATE_TEST_SUITE_P(quick_blas_batched_ex_small_int8,
-//                          parameterized_gemm_batched_ex,
-//                          Combine(ValuesIn(int8_matrix_size_range),
-//                                  ValuesIn(alpha_beta_range_int8),
-//                                  ValuesIn(transA_transB_range),
-//                                  ValuesIn(precision_int8),
-//                                  ValuesIn(batch_count_range),
-//                                  ValuesIn(is_fortran)));
+INSTANTIATE_TEST_SUITE_P(quick_blas_batched_ex_small_int8,
+                         parameterized_gemm_batched_ex,
+                         Combine(ValuesIn(int8_matrix_size_range),
+                                 ValuesIn(alpha_beta_range_int8),
+                                 ValuesIn(transA_transB_range),
+                                 ValuesIn(precision_int8),
+                                 ValuesIn(batch_count_range),
+                                 ValuesIn(is_fortran)));
