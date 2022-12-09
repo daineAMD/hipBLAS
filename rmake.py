@@ -222,9 +222,9 @@ def config_cmd():
 
     if args.build_clients:
         cmake_build_dir = cmake_path(build_dir)
-        cmake_options.append( f"-DBUILD_CLIENTS_TESTS=ON -DBUILD_CLIENTS_BENCHMARKS=ON -DBUILD_CLIENTS_SAMPLES=ON -DBUILD_DIR={cmake_build_dir} " )
-        # if os.name != "nt":
-        #     cmake_options.append( f"-DLINK_BLIS=ON")
+        cmake_options.append( f"-DBUILD_CLIENTS_TESTS=ON -DBUILD_CLIENTS_BENCHMARKS=ON -DBUILD_CLIENTS_SAMPLES=ON -DBUILD_DIR={build_dir}" )
+        if os.name != "nt":
+            cmake_options.append( f"-DLINK_BLIS=ON")
 
     if args.build_solver:
         cmake_options.append (f"-DBUILD_WITH_SOLVER=ON")

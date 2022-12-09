@@ -137,7 +137,7 @@ add_executable( hipblas-test ${hipblas_f90_source} ${hipblas_test_source} ${hipb
 
 if(LINK_BLIS)
     set( BLIS_INCLUDE_DIR ${BUILD_DIR}/deps/blis/include/blis )
-    set( BLIS_LIBRARY ${BUILD_DIR}/deps/blis/lib/libblis.so )
+    set( BLIS_LIBRARY ${BUILD_DIR}/deps/blis/lib/libblis.a )
 endif()
 
 target_include_directories( hipblas-test
@@ -161,7 +161,8 @@ target_include_directories( hipblas-test
 )
 
 if (NOT WIN32)
-    target_link_libraries( hipblas-test PRIVATE hipblas_fortran_client lapack cblas stdc++fs )
+    find_package(OpenMP)
+    target_link_libraries( hipblas-test PRIVATE hipblas_fortran_client lapack cblas stdc++fs OpenMP::OpenMP_CXX)
 endif()
 
 target_link_libraries( hipblas-test PRIVATE ${BLAS_LIBRARY} roc::hipblas GTest::GTest Threads::Threads )

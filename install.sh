@@ -573,8 +573,34 @@ if [[ "${build_relocatable}" == true ]]; then
     fi
 fi
 
-build_dir=./build
+build_dir=$(readlink -m ./build)
 printf "\033[32mCreating project build directory in: \033[33m${build_dir}\033[0m\n"
+
+install_blis()
+{
+    #Download prebuilt AMD multithreaded blis
+    if [[ ! -e "./blis/lib/libblis.a" ]]; then
+      case "${ID}" in
+          centos|rhel|sles|opensuse-leap)
+              wget -nv -O blis.tar.gz https://github.com/amd/blis/releases/download/2.0/aocl-blis-mt-centos-2.0.tar.gz
+              ;;
+          ubuntu)
+              wget -nv -O blis.tar.gz https://github.com/amd/blis/releases/download/2.0/aocl-blis-mt-ubuntu-2.0.tar.gz
+              ;;
+          *)
+              echo "Unsupported OS for this script"
+              wget -nv -O blis.tar.gz https://github.com/amd/blis/releases/download/2.0/aocl-blis-mt-ubuntu-2.0.tar.gz
+              ;;
+      esac
+
+      tar -xvf blis.tar.gz
+      rm -rf blis/amd-blis-mt
+      mv amd-blis-mt blis
+      rm blis.tar.gz
+      cd blis/lib
+      ln -sf libblis-mt.a libblis.a
+    fi
+}
 
 # #################################################
 # prep
@@ -618,7 +644,7 @@ if [[ "${install_dependencies}" == true ]]; then
         make -j16
         sudo make install
         cd ..
-        rm -rf cmake-3.16.8.tar.gz cmake-3.16.8
+        rm -rf cmake-3.16.8.tar.gz cmake-3install_blis.16.8
       else
           echo "hipBLAS requires CMake version >= 3.16.8 and CMake version ${CMAKE_VERSION} is installed. Run install.sh again with --cmake_install flag and CMake version ${CMAKE_VERSION} will be uninstalled and CMake version 3.16.8 will be installed"
           exit 2
@@ -626,13 +652,21 @@ if [[ "${install_dependencies}" == true ]]; then
   fi
 
   # The following builds googletest & lapack from source, installs into cmake default /usr/local
-  pushd .
+  if [[ "${build_clients}" == true ]]; then
+    pushd .
     printf "\033[32mBuilding \033[33mgoogletest & lapack\033[32m from source; installing into \033[33m/usr/local\033[0m\n"
     mkdir -p ${build_dir}/deps && cd ${build_dir}/deps
     export FC="gfortran"
     ${cmake_executable} -DCMAKE_INSTALL_PREFIX=deps-install ../../deps
     make -j$(nproc)
     make install
+    install_blis
+    popd
+  fi
+elif [[ "${build_clients}" == true ]]; then
+  pushd .
+  mkdir -p ${build_dir}/deps && cd ${build_dir}/deps
+  install_blis
   popd
 fi
 
@@ -679,7 +713,7 @@ pushd .
 
   # clients
   if [[ "${build_clients}" == true ]]; then
-    cmake_client_options+=("-DBUILD_CLIENTS_TESTS=ON" "-DBUILD_CLIENTS_BENCHMARKS=ON" "-DBUILD_CLIENTS_SAMPLES=ON")
+    cmake_client_options+=("-DBUILD_CLIENTS_TESTS=ON" "-DBUILD_CLIENTS_BENCHMARKS=ON" "-DBUILD_CLIENTS_SAMPLES=ON" "-DBUILD_DIR=${build_dir}" "-DLINK_BLIS=ON")
   fi
 
   # solver

@@ -125,8 +125,6 @@ inline hipblasStatus_t
         for(int b = 0; b < batch_count; b++)
         {
             REFBLAS_FUNC(N, hx.data() + b * stridex, incx, &(cpu_result[b]));
-            // change to Fortran 1 based indexing as in BLAS standard, not cblas zero based indexing
-            cpu_result[b] += 1;
         }
 
         if(arg.unit_check)

@@ -206,6 +206,16 @@ namespace std
         return abs(reinterpret_cast<const complex<double>&>(z));
     }
 
+    inline hipblasHalf conj(const hipblasHalf& r)
+    {
+        return r;
+    }
+
+    inline hipblasBfloat16 conj(const hipblasBfloat16& r)
+    {
+        return r;
+    }
+
     inline float conj(const float& r)
     {
         return r;

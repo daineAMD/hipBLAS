@@ -102,8 +102,6 @@ inline hipblasStatus_t testing_iamax_iamin(const Arguments& arg, hipblas_iamax_i
                     CPU BLAS
         =================================================================== */
         REFBLAS_FUNC(N, hx.data(), incx, &cpu_result);
-        // change to Fortran 1 based indexing as in BLAS standard, not cblas zero based indexing
-        cpu_result += 1;
 
         if(arg.unit_check)
         {

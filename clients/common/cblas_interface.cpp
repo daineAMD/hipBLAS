@@ -25,6 +25,7 @@
 #include "cblas_interface.h"
 #include "cblas.h"
 #include "hipblas.h"
+#include "lapack_utilities.hpp"
 #include "utility.h"
 #include <cmath>
 #include <memory>
@@ -38,11 +39,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-void strtri_(char* uplo, char* diag, int* n, float* A, int* lda, int* info);
-void dtrtri_(char* uplo, char* diag, int* n, double* A, int* lda, int* info);
-void ctrtri_(char* uplo, char* diag, int* n, hipblasComplex* A, int* lda, int* info);
-void ztrtri_(char* uplo, char* diag, int* n, hipblasDoubleComplex* A, int* lda, int* info);
 
 void sgetrf_(int* m, int* n, float* A, int* lda, int* ipiv, int* info);
 void dgetrf_(int* m, int* n, double* A, int* lda, int* ipiv, int* info);
@@ -147,58 +143,6 @@ void zgels_(char*                 trans,
             hipblasDoubleComplex* work,
             int*                  lwork,
             int*                  info);
-
-void spotrf_(char* uplo, int* m, float* A, int* lda, int* info);
-void dpotrf_(char* uplo, int* m, double* A, int* lda, int* info);
-void cpotrf_(char* uplo, int* m, hipblasComplex* A, int* lda, int* info);
-void zpotrf_(char* uplo, int* m, hipblasDoubleComplex* A, int* lda, int* info);
-
-void cspr_(
-    char* uplo, int* n, hipblasComplex* alpha, hipblasComplex* x, int* incx, hipblasComplex* A);
-
-void zspr_(char*                 uplo,
-           int*                  n,
-           hipblasDoubleComplex* alpha,
-           hipblasDoubleComplex* x,
-           int*                  incx,
-           hipblasDoubleComplex* A);
-
-void csyr_(char*           uplo,
-           int*            n,
-           hipblasComplex* alpha,
-           hipblasComplex* x,
-           int*            incx,
-           hipblasComplex* a,
-           int*            lda);
-void zsyr_(char*                 uplo,
-           int*                  n,
-           hipblasDoubleComplex* alpha,
-           hipblasDoubleComplex* x,
-           int*                  incx,
-           hipblasDoubleComplex* a,
-           int*                  lda);
-
-void csymv_(char*           uplo,
-            int*            n,
-            hipblasComplex* alpha,
-            hipblasComplex* A,
-            int*            lda,
-            hipblasComplex* x,
-            int*            incx,
-            hipblasComplex* beta,
-            hipblasComplex* y,
-            int*            incy);
-
-void zsymv_(char*                 uplo,
-            int*                  n,
-            hipblasDoubleComplex* alpha,
-            hipblasDoubleComplex* A,
-            int*                  lda,
-            hipblasDoubleComplex* x,
-            int*                  incx,
-            hipblasDoubleComplex* beta,
-            hipblasDoubleComplex* y,
-            int*                  incy);
 
 #ifdef __cplusplus
 }
@@ -596,45 +540,39 @@ void cblas_nrm2<hipblasDoubleComplex, double>(int                         n,
     *result = cblas_dznrm2(n, x, incx);
 }
 
-///////////////////
-// rot functions //
-///////////////////
-// LAPACK fortran library functionality
-extern "C" {
-void crot_(const int*            n,
-           hipblasComplex*       cx,
-           const int*            incx,
-           hipblasComplex*       cy,
-           const int*            incy,
-           const float*          c,
-           const hipblasComplex* s);
-void csrot_(const int*      n,
-            hipblasComplex* cx,
-            const int*      incx,
-            hipblasComplex* cy,
-            const int*      incy,
-            const float*    c,
-            const float*    s);
-void zrot_(const int*                  n,
-           hipblasDoubleComplex*       cx,
-           const int*                  incx,
-           hipblasDoubleComplex*       cy,
-           const int*                  incy,
-           const double*               c,
-           const hipblasDoubleComplex* s);
-void zdrot_(const int*            n,
-            hipblasDoubleComplex* cx,
-            const int*            incx,
-            hipblasDoubleComplex* cy,
-            const int*            incy,
-            const double*         c,
-            const double*         s);
-
-void crotg_(hipblasComplex* a, hipblasComplex* b, float* c, hipblasComplex* s);
-void zrotg_(hipblasDoubleComplex* a, hipblasDoubleComplex* b, double* c, hipblasDoubleComplex* s);
+// rot
+template <typename T1, typename T2, typename T3>
+void lapack_xrot(int n, T1* cx, int incx, T1* cy, int incy, T2 c_in, T3 s)
+{
+    auto c     = std::real(c_in);
+    T1   stemp = T1(0.0);
+    if(n <= 0)
+        return;
+    if(incx == 1 && incy == 1)
+    {
+        for(int i = 0; i < n; i++)
+        {
+            stemp = T1(c * cx[i] + s * cy[i]);
+            cy[i] = T1(c * cy[i] - (is_complex<T3> ? std::conj(s) : s) * cx[i]);
+            cx[i] = stemp;
+        }
+    }
+    else
+    {
+        if(incx < 0)
+            cx -= (n - 1) * incx;
+        if(incy < 0)
+            cy -= (n - 1) * incy;
+        for(int i = 0; i < n; i++)
+        {
+            stemp = T1(c * cx[i * incx] + s * cy[i * incy]);
+            cy[i * incy]
+                = T1(c * cy[i * incy] - (is_complex<T3> ? std::conj(s) : s) * cx[i * incx]);
+            cx[i * incx] = stemp;
+        }
+    }
 }
 
-// rot
 template <>
 void cblas_rot<hipblasHalf>(
     int n, hipblasHalf* x, int incx, hipblasHalf* y, int incy, hipblasHalf c, hipblasHalf s)
@@ -659,7 +597,7 @@ void cblas_rot<hipblasHalf>(
     const float c_float = half_to_float(c);
     const float s_float = half_to_float(s);
 
-    cblas_srot(n, x_float.data(), incx, y_float.data(), incy, c_float, s_float);
+    lapack_xrot(n, x_float.data(), incx, y_float.data(), incy, c_float, s_float);
 
     for(size_t i = 0; i < n; i++)
     {
@@ -697,7 +635,7 @@ void cblas_rot<hipblasBfloat16>(int              n,
     const float c_float = bfloat16_to_float(c);
     const float s_float = bfloat16_to_float(s);
 
-    cblas_srot(n, x_float.data(), incx, y_float.data(), incy, c_float, s_float);
+    lapack_xrot(n, x_float.data(), incx, y_float.data(), incy, c_float, s_float);
 
     for(size_t i = 0; i < n; i++)
     {
@@ -727,22 +665,21 @@ void cblas_rot<hipblasComplex>(int             n,
                                hipblasComplex  c,
                                hipblasComplex  s)
 {
-    float c_real = std::real(c);
-    crot_(&n, x, &incx, y, &incy, &c_real, &s);
+    lapack_xrot(n, x, incx, y, incy, c, s);
 }
 
 template <>
 void cblas_rot<hipblasComplex, float>(
     int n, hipblasComplex* x, int incx, hipblasComplex* y, int incy, float c, hipblasComplex s)
 {
-    crot_(&n, x, &incx, y, &incy, &c, &s);
+    lapack_xrot(n, x, incx, y, incy, c, s);
 }
 
 template <>
 void cblas_rot<hipblasComplex, float, float>(
     int n, hipblasComplex* x, int incx, hipblasComplex* y, int incy, float c, float s)
 {
-    csrot_(&n, x, &incx, y, &incy, &c, &s);
+    lapack_xrot(n, x, incx, y, incy, c, s);
 }
 
 template <>
@@ -754,8 +691,7 @@ void cblas_rot<hipblasDoubleComplex>(int                   n,
                                      hipblasDoubleComplex  c,
                                      hipblasDoubleComplex  s)
 {
-    double c_real = std::real(c);
-    zrot_(&n, x, &incx, y, &incy, &c_real, &s);
+    lapack_xrot(n, x, incx, y, incy, c, s);
 }
 
 template <>
@@ -767,17 +703,41 @@ void cblas_rot<hipblasDoubleComplex, double>(int                   n,
                                              double                c,
                                              hipblasDoubleComplex  s)
 {
-    zrot_(&n, x, &incx, y, &incy, &c, &s);
+    lapack_xrot(n, x, incx, y, incy, c, s);
 }
 
 template <>
 void cblas_rot<hipblasDoubleComplex, double, double>(
     int n, hipblasDoubleComplex* x, int incx, hipblasDoubleComplex* y, int incy, double c, double s)
 {
-    zdrot_(&n, x, &incx, y, &incy, &c, &s);
+    lapack_xrot(n, x, incx, y, incy, c, s);
 }
 
 // rotg
+template <typename T1, typename T2>
+void lapack_xrotg(T1& ca, T1& cb, T2& c, T1& s)
+{
+    T1     alpha = T1(0.0);
+    double norm  = 0.0;
+    if(std::abs(ca) == 0)
+    {
+        c  = 0.0;
+        s  = T1(1.0);
+        ca = cb;
+    }
+    else
+    {
+        auto scale = std::abs(ca) + std::abs(cb);
+        auto sa    = std::abs(ca / scale);
+        auto sb    = std::abs(cb / scale);
+        auto norm  = scale * std::sqrt(sa * sa + sb * sb);
+        auto alpha = ca / std::abs(ca);
+        c          = std::abs(ca) / norm;
+        s          = alpha * std::conj(cb) / norm;
+        ca         = alpha * norm;
+    }
+}
+
 template <>
 void cblas_rotg<float>(float* a, float* b, float* c, float* s)
 {
@@ -796,7 +756,7 @@ void cblas_rotg<hipblasComplex, float>(hipblasComplex* a,
                                        float*          c,
                                        hipblasComplex* s)
 {
-    crotg_(a, b, c, s);
+    lapack_xrotg(*a, *b, *c, *s);
 }
 
 template <>
@@ -805,7 +765,7 @@ void cblas_rotg<hipblasDoubleComplex, double>(hipblasDoubleComplex* a,
                                               double*               c,
                                               hipblasDoubleComplex* s)
 {
-    zrotg_(a, b, c, s);
+    lapack_xrotg(*a, *b, *c, *s);
 }
 
 // rotm
@@ -863,31 +823,6 @@ void cblas_asum<hipblasDoubleComplex, double>(int                         n,
 }
 
 // amax
-template <>
-void cblas_iamax<float>(int n, const float* x, int incx, int* result)
-{
-    *result = (int)cblas_isamax(n, x, incx);
-}
-
-template <>
-void cblas_iamax<double>(int n, const double* x, int incx, int* result)
-{
-    *result = (int)cblas_idamax(n, x, incx);
-}
-
-template <>
-void cblas_iamax<hipblasComplex>(int n, const hipblasComplex* x, int incx, int* result)
-{
-    *result = (int)cblas_icamax(n, x, incx);
-}
-
-template <>
-void cblas_iamax<hipblasDoubleComplex>(int n, const hipblasDoubleComplex* x, int incx, int* result)
-{
-    *result = (int)cblas_izamax(n, x, incx);
-}
-
-// amin
 // amin is not implemented in cblas, make local version
 template <typename T>
 double abs_helper(T val)
@@ -907,6 +842,57 @@ double abs_helper(hipblasDoubleComplex val)
     return std::abs(val.real()) + std::abs(val.imag());
 }
 
+template <typename T>
+int cblas_iamax_helper(int N, const T* X, int incx)
+{
+    int maxpos = -1;
+    if(N > 0 && incx > 0)
+    {
+        auto max = abs_helper(X[0]);
+        maxpos   = 0;
+        for(size_t i = 1; i < N; ++i)
+        {
+            auto a = abs_helper(X[i * incx]);
+            if(a > max)
+            {
+                max    = a;
+                maxpos = i;
+            }
+        }
+    }
+    return maxpos;
+}
+
+template <>
+void cblas_iamax<float>(int n, const float* x, int incx, int* result)
+{
+    *result = cblas_iamax_helper(n, x, incx);
+    *result += 1;
+}
+
+template <>
+void cblas_iamax<double>(int n, const double* x, int incx, int* result)
+{
+    *result = cblas_iamax_helper(n, x, incx);
+    *result += 1;
+}
+
+template <>
+void cblas_iamax<hipblasComplex>(int n, const hipblasComplex* x, int incx, int* result)
+{
+    *result = cblas_iamax_helper(n, x, incx);
+    *result += 1;
+}
+
+template <>
+void cblas_iamax<hipblasDoubleComplex>(int n, const hipblasDoubleComplex* x, int incx, int* result)
+{
+    *result = cblas_iamax_helper(n, x, incx);
+    *result += 1;
+}
+
+// amin
+// amin is not implemented in cblas, make local version
 template <typename T>
 int cblas_iamin_helper(int N, const T* X, int incx)
 {
@@ -932,24 +918,28 @@ template <>
 void cblas_iamin<float>(int n, const float* x, int incx, int* result)
 {
     *result = (int)cblas_iamin_helper(n, x, incx);
+    *result += 1;
 }
 
 template <>
 void cblas_iamin<double>(int n, const double* x, int incx, int* result)
 {
     *result = (int)cblas_iamin_helper(n, x, incx);
+    *result += 1;
 }
 
 template <>
 void cblas_iamin<hipblasComplex>(int n, const hipblasComplex* x, int incx, int* result)
 {
     *result = (int)cblas_iamin_helper(n, x, incx);
+    *result += 1;
 }
 
 template <>
 void cblas_iamin<hipblasDoubleComplex>(int n, const hipblasDoubleComplex* x, int incx, int* result)
 {
     *result = (int)cblas_iamin_helper(n, x, incx);
+    *result += 1;
 }
 
 /*
@@ -1482,13 +1472,13 @@ void cblas_spmv(hipblasFillMode_t uplo,
 template <>
 void cblas_spr(hipblasFillMode_t uplo, int n, float alpha, float* x, int incx, float* AP)
 {
-    cblas_sspr(CblasColMajor, (CBLAS_UPLO)uplo, n, alpha, x, incx, AP);
+    lapack_xspr(uplo, n, alpha, x, incx, AP);
 }
 
 template <>
 void cblas_spr(hipblasFillMode_t uplo, int n, double alpha, double* x, int incx, double* AP)
 {
-    cblas_dspr(CblasColMajor, (CBLAS_UPLO)uplo, n, alpha, x, incx, AP);
+    lapack_xspr(uplo, n, alpha, x, incx, AP);
 }
 
 template <>
@@ -1499,8 +1489,7 @@ void cblas_spr(hipblasFillMode_t uplo,
                int               incx,
                hipblasComplex*   AP)
 {
-    char u = uplo == HIPBLAS_FILL_MODE_UPPER ? 'U' : 'L';
-    cspr_(&u, &n, &alpha, x, &incx, AP);
+    lapack_xspr(uplo, n, alpha, x, incx, AP);
 }
 
 template <>
@@ -1511,8 +1500,7 @@ void cblas_spr(hipblasFillMode_t     uplo,
                int                   incx,
                hipblasDoubleComplex* AP)
 {
-    char u = uplo == HIPBLAS_FILL_MODE_UPPER ? 'U' : 'L';
-    zspr_(&u, &n, &alpha, x, &incx, AP);
+    lapack_xspr(uplo, n, alpha, x, incx, AP);
 }
 
 // spr2
@@ -1549,7 +1537,7 @@ void cblas_symv(hipblasFillMode_t uplo,
                 float*            y,
                 int               incy)
 {
-    cblas_ssymv(CblasColMajor, (CBLAS_UPLO)uplo, n, alpha, A, lda, x, incx, beta, y, incy);
+    lapack_xsymv(uplo, n, alpha, A, lda, x, incx, beta, y, incy);
 }
 
 template <>
@@ -1564,7 +1552,7 @@ void cblas_symv(hipblasFillMode_t uplo,
                 double*           y,
                 int               incy)
 {
-    cblas_dsymv(CblasColMajor, (CBLAS_UPLO)uplo, n, alpha, A, lda, x, incx, beta, y, incy);
+    lapack_xsymv(uplo, n, alpha, A, lda, x, incx, beta, y, incy);
 }
 
 template <>
@@ -1579,8 +1567,7 @@ void cblas_symv(hipblasFillMode_t uplo,
                 hipblasComplex*   y,
                 int               incy)
 {
-    char u = uplo == HIPBLAS_FILL_MODE_UPPER ? 'U' : 'L';
-    csymv_(&u, &n, &alpha, A, &lda, x, &incx, &beta, y, &incy);
+    lapack_xsymv(uplo, n, alpha, A, lda, x, incx, beta, y, incy);
 }
 
 template <>
@@ -1595,8 +1582,7 @@ void cblas_symv(hipblasFillMode_t     uplo,
                 hipblasDoubleComplex* y,
                 int                   incy)
 {
-    char u = uplo == HIPBLAS_FILL_MODE_UPPER ? 'U' : 'L';
-    zsymv_(&u, &n, &alpha, A, &lda, x, &incx, &beta, y, &incy);
+    lapack_xsymv(uplo, n, alpha, A, lda, x, incx, beta, y, incy);
 }
 
 // syr
@@ -1604,14 +1590,14 @@ template <>
 void cblas_syr<float>(
     hipblasFillMode_t uplo, int n, float alpha, float* x, int incx, float* A, int lda)
 {
-    cblas_ssyr(CblasColMajor, (CBLAS_UPLO)uplo, n, alpha, x, incx, A, lda);
+    lapack_xsyr(uplo, n, alpha, x, incx, A, lda);
 }
 
 template <>
 void cblas_syr<double>(
     hipblasFillMode_t uplo, int n, double alpha, double* x, int incx, double* A, int lda)
 {
-    cblas_dsyr(CblasColMajor, (CBLAS_UPLO)uplo, n, alpha, x, incx, A, lda);
+    lapack_xsyr(uplo, n, alpha, x, incx, A, lda);
 }
 
 template <>
@@ -1623,8 +1609,7 @@ void cblas_syr<hipblasComplex>(hipblasFillMode_t uplo,
                                hipblasComplex*   A,
                                int               lda)
 {
-    char u = uplo == HIPBLAS_FILL_MODE_UPPER ? 'U' : 'L';
-    csyr_(&u, &n, &alpha, x, &incx, A, &lda);
+    lapack_xsyr(uplo, n, alpha, x, incx, A, lda);
 }
 
 template <>
@@ -1636,8 +1621,7 @@ void cblas_syr<hipblasDoubleComplex>(hipblasFillMode_t     uplo,
                                      hipblasDoubleComplex* A,
                                      int                   lda)
 {
-    char u = uplo == HIPBLAS_FILL_MODE_UPPER ? 'U' : 'L';
-    zsyr_(&u, &n, &alpha, x, &incx, A, &lda);
+    lapack_xsyr(uplo, n, alpha, x, incx, A, lda);
 }
 
 // syr2
@@ -1681,7 +1665,7 @@ void cblas_syr2(hipblasFillMode_t uplo,
                 float*            A,
                 int               lda)
 {
-    cblas_ssyr2(CblasColMajor, CBLAS_UPLO(uplo), n, alpha, x, incx, y, incy, A, lda);
+    cblas_syr2_local(uplo, n, alpha, x, incx, y, incy, A, lda);
 }
 
 template <>
@@ -1695,7 +1679,7 @@ void cblas_syr2(hipblasFillMode_t uplo,
                 double*           A,
                 int               lda)
 {
-    cblas_dsyr2(CblasColMajor, CBLAS_UPLO(uplo), n, alpha, x, incx, y, incy, A, lda);
+    cblas_syr2_local(uplo, n, alpha, x, incx, y, incy, A, lda);
 }
 
 template <>
@@ -1730,32 +1714,36 @@ void cblas_syr2(hipblasFillMode_t     uplo,
 template <>
 int cblas_potrf(char uplo, int m, float* A, int lda)
 {
-    int info;
-    spotrf_(&uplo, &m, A, &lda, &info);
+    int               info;
+    hipblasFillMode_t u = char2hipblas_fill(uplo);
+    lapack_xpotrf(u, m, A, lda, info);
     return info;
 }
 
 template <>
 int cblas_potrf(char uplo, int m, double* A, int lda)
 {
-    int info;
-    dpotrf_(&uplo, &m, A, &lda, &info);
+    int               info;
+    hipblasFillMode_t u = char2hipblas_fill(uplo);
+    lapack_xpotrf(u, m, A, lda, info);
     return info;
 }
 
 template <>
 int cblas_potrf(char uplo, int m, hipblasComplex* A, int lda)
 {
-    int info;
-    cpotrf_(&uplo, &m, A, &lda, &info);
+    int               info;
+    hipblasFillMode_t u = char2hipblas_fill(uplo);
+    lapack_xpotrf(u, m, A, lda, info);
     return info;
 }
 
 template <>
 int cblas_potrf(char uplo, int m, hipblasDoubleComplex* A, int lda)
 {
-    int info;
-    zpotrf_(&uplo, &m, A, &lda, &info);
+    int               info;
+    hipblasFillMode_t u = char2hipblas_fill(uplo);
+    lapack_xpotrf(u, m, A, lda, info);
     return info;
 }
 
@@ -3451,7 +3439,7 @@ int cblas_trtri<float>(char uplo, char diag, int n, float* A, int lda)
     // just directly cast, since transA, transB are integers in the enum
     // printf("transA: hipblas =%d, cblas=%d\n", transA, (CBLAS_TRANSPOSE)transA );
     int info;
-    strtri_(&uplo, &diag, &n, A, &lda, &info);
+    lapack_xtrtri(uplo, diag, n, A, lda); // TODO: info?
     return info;
 }
 
@@ -3461,7 +3449,7 @@ int cblas_trtri<double>(char uplo, char diag, int n, double* A, int lda)
     // just directly cast, since transA, transB are integers in the enum
     // printf("transA: hipblas =%d, cblas=%d\n", transA, (CBLAS_TRANSPOSE)transA );
     int info;
-    dtrtri_(&uplo, &diag, &n, A, &lda, &info);
+    lapack_xtrtri(uplo, diag, n, A, lda); // TODO: info?
     return info;
 }
 
@@ -3471,7 +3459,7 @@ int cblas_trtri<hipblasComplex>(char uplo, char diag, int n, hipblasComplex* A, 
     // just directly cast, since transA, transB are integers in the enum
     // printf("transA: hipblas =%d, cblas=%d\n", transA, (CBLAS_TRANSPOSE)transA );
     int info;
-    ctrtri_(&uplo, &diag, &n, A, &lda, &info);
+    lapack_xtrtri(uplo, diag, n, A, lda); // TODO: info?
     return info;
 }
 
@@ -3481,7 +3469,7 @@ int cblas_trtri<hipblasDoubleComplex>(char uplo, char diag, int n, hipblasDouble
     // just directly cast, since transA, transB are integers in the enum
     // printf("transA: hipblas =%d, cblas=%d\n", transA, (CBLAS_TRANSPOSE)transA );
     int info;
-    ztrtri_(&uplo, &diag, &n, A, &lda, &info);
+    lapack_xtrtri(uplo, diag, n, A, lda); // TODO: info?
     return info;
 }
 
@@ -3596,6 +3584,7 @@ void cblas_trmm<hipblasDoubleComplex>(hipblasSideMode_t           side,
                 ldb);
 }
 
+// using lapack for getrf, getrs, getrf, geqrf, gels
 // getrf
 template <>
 int cblas_getrf<float>(int m, int n, float* A, int lda, int* ipiv)

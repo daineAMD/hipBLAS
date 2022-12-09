@@ -25,6 +25,7 @@
 #include "norm.h"
 #include "cblas.h"
 #include "hipblas.h"
+#include "lapack_utilities.hpp"
 #include <stdio.h>
 
 /* =====================================================================
@@ -43,17 +44,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-float  slange_(char* norm_type, int* m, int* n, float* A, int* lda, float* work);
-double dlange_(char* norm_type, int* m, int* n, double* A, int* lda, double* work);
-float  clange_(char* norm_type, int* m, int* n, hipblasComplex* A, int* lda, float* work);
-double zlange_(char* norm_type, int* m, int* n, hipblasDoubleComplex* A, int* lda, double* work);
-
-float  slansy_(char* norm_type, char* uplo, int* n, float* A, int* lda, float* work);
-double dlansy_(char* norm_type, char* uplo, int* n, double* A, int* lda, double* work);
-//  float  clanhe_(char* norm_type, char* uplo, int* n, hipblasComplex* A, int* lda, float* work);
-//  double zlanhe_(char* norm_type, char* uplo, int* n, hipblasDoubleComplex* A, int* lda, double*
-//  work);
 
 void saxpy_(int* n, float* alpha, float* x, int* incx, float* y, int* incy);
 void daxpy_(int* n, double* alpha, double* x, int* incx, double* y, int* incy);
@@ -79,15 +69,15 @@ double norm_check_general<float>(char norm_type, int M, int N, int lda, float* h
 {
     // norm type can be M', 'I', 'F', 'l': 'F' (Frobenius norm) is used mostly
 
-    float work;
-    int   incx  = 1;
-    float alpha = -1.0f;
-    int   size  = lda * N;
+    double work;
+    int    incx  = 1;
+    float  alpha = -1.0f;
+    int    size  = lda * N;
 
-    float cpu_norm = slange_(&norm_type, &M, &N, hCPU, &lda, &work);
+    float cpu_norm = lapack_xlange(norm_type, M, N, hCPU, lda, &work);
     saxpy_(&size, &alpha, hCPU, &incx, hGPU, &incx);
 
-    float error = slange_(&norm_type, &M, &N, hGPU, &lda, &work) / cpu_norm;
+    float error = lapack_xlange(norm_type, M, N, hGPU, lda, &work) / cpu_norm;
 
     return (double)error;
 }
@@ -102,10 +92,10 @@ double norm_check_general<double>(char norm_type, int M, int N, int lda, double*
     double alpha = -1.0;
     int    size  = lda * N;
 
-    double cpu_norm = dlange_(&norm_type, &M, &N, hCPU, &lda, work);
+    double cpu_norm = lapack_xlange(norm_type, M, N, hCPU, lda, work);
     daxpy_(&size, &alpha, hCPU, &incx, hGPU, &incx);
 
-    double error = dlange_(&norm_type, &M, &N, hGPU, &lda, work) / cpu_norm;
+    double error = lapack_xlange(norm_type, M, N, hGPU, lda, work) / cpu_norm;
 
     return error;
 }
@@ -116,15 +106,15 @@ double norm_check_general<hipblasComplex>(
 {
     //norm type can be M', 'I', 'F', 'l': 'F' (Frobenius norm) is used mostly
 
-    float          work[1];
+    double         work[1];
     int            incx  = 1;
     hipblasComplex alpha = -1.0f;
     int            size  = lda * N;
 
-    float cpu_norm = clange_(&norm_type, &M, &N, hCPU, &lda, work);
+    float cpu_norm = lapack_xlange(norm_type, M, N, hCPU, lda, work);
     caxpy_(&size, &alpha, hCPU, &incx, hGPU, &incx);
 
-    float error = clange_(&norm_type, &M, &N, hGPU, &lda, work) / cpu_norm;
+    float error = lapack_xlange(norm_type, M, N, hGPU, lda, work) / cpu_norm;
 
     return (double)error;
 }
@@ -140,10 +130,10 @@ double norm_check_general<hipblasDoubleComplex>(
     hipblasDoubleComplex alpha = -1.0;
     int                  size  = lda * N;
 
-    double cpu_norm = zlange_(&norm_type, &M, &N, hCPU, &lda, work);
+    double cpu_norm = lapack_xlange(norm_type, M, N, hCPU, lda, work);
     zaxpy_(&size, &alpha, hCPU, &incx, hGPU, &incx);
 
-    double error = zlange_(&norm_type, &M, &N, hGPU, &lda, work) / cpu_norm;
+    double error = lapack_xlange(norm_type, M, N, hGPU, lda, work) / cpu_norm;
 
     return error;
 }
@@ -222,15 +212,15 @@ double
 {
     // norm type can be M', 'I', 'F', 'l': 'F' (Frobenius norm) is used mostly
 
-    float work[1];
-    int   incx  = 1;
-    float alpha = -1.0f;
-    int   size  = lda * N;
+    double work[1];
+    int    incx  = 1;
+    float  alpha = -1.0f;
+    int    size  = lda * N;
 
-    float cpu_norm = slansy_(&norm_type, &uplo, &N, hCPU, &lda, work);
+    float cpu_norm = lapack_xlansy<false>(norm_type, uplo, N, hCPU, lda, work);
     saxpy_(&size, &alpha, hCPU, &incx, hGPU, &incx);
 
-    float error = slansy_(&norm_type, &uplo, &N, hGPU, &lda, work) / cpu_norm;
+    float error = lapack_xlansy<false>(norm_type, uplo, N, hGPU, lda, work) / cpu_norm;
 
     return (double)error;
 }
@@ -246,10 +236,10 @@ double norm_check_symmetric<double>(
     double alpha = -1.0;
     int    size  = lda * N;
 
-    double cpu_norm = dlansy_(&norm_type, &uplo, &N, hCPU, &lda, work);
+    double cpu_norm = lapack_xlansy<false>(norm_type, uplo, N, hCPU, lda, work);
     daxpy_(&size, &alpha, hCPU, &incx, hGPU, &incx);
 
-    double error = dlansy_(&norm_type, &uplo, &N, hGPU, &lda, work) / cpu_norm;
+    double error = lapack_xlansy<false>(norm_type, uplo, N, hGPU, lda, work) / cpu_norm;
 
     return error;
 }
