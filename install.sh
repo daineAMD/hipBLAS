@@ -299,11 +299,11 @@ install_packages( )
   fi
 
   if [[ "${build_clients}" == true ]]; then
-    library_dependencies_ubuntu+=( "gfortran" )
-    library_dependencies_centos_rhel+=( "devtoolset-7-gcc-gfortran" )
-    library_dependencies_centos_rhel_8+=( "gcc-gfortran" )
-    library_dependencies_fedora+=( "gcc-gfortran" )
-    library_dependencies_sles+=( "gcc-fortran pkg-config" "dpkg" )
+    library_dependencies_ubuntu+=( "gfortran" "libopenblas-dev")
+    library_dependencies_centos_rhel+=( "devtoolset-7-gcc-gfortran" "openblas-devel")
+    library_dependencies_centos_rhel_8+=( "gcc-gfortran" "openblas-devel")
+    library_dependencies_fedora+=( "gcc-gfortran" "openblas-devel")
+    library_dependencies_sles+=( "gcc-fortran pkg-config" "dpkg" "openblas-devel")
   fi
 
   case "${ID}" in
@@ -627,7 +627,7 @@ if [[ "${install_dependencies}" == true ]]; then
 
   # The following builds googletest & lapack from source, installs into cmake default /usr/local
   pushd .
-    printf "\033[32mBuilding \033[33mgoogletest & lapack\033[32m from source; installing into \033[33m/usr/local\033[0m\n"
+    printf "\033[32mBuilding \033[33mgoogletest \033[32m from source; installing into \033[33m/usr/local\033[0m\n"
     mkdir -p ${build_dir}/deps && cd ${build_dir}/deps
     export FC="gfortran"
     ${cmake_executable} -DCMAKE_INSTALL_PREFIX=deps-install ../../deps

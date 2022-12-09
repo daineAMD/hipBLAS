@@ -51,11 +51,11 @@ add_executable( hipblas-bench ${hipblas_bench_source} ${hipblas_benchmark_common
 
 target_compile_features( hipblas-bench PRIVATE cxx_static_assert cxx_nullptr cxx_auto_type )
 
-if(LINK_BLIS)
-  target_link_libraries( hipblas-bench PRIVATE ${BLIS_LIBRARY} )
-elseif(NOT WIN32)
+# if(LINK_BLIS)
+  # target_link_libraries( hipblas-bench PRIVATE ${BLIS_LIBRARY} )
+# elseif(NOT WIN32)
   target_link_libraries( hipblas-bench PRIVATE blas )
-endif()
+# endif()
 
 # Internal header includes
 target_include_directories( hipblas-bench
@@ -73,7 +73,7 @@ target_include_directories( hipblas-bench
 )
 
 if (NOT WIN32)
-    target_link_libraries( hipblas-bench PRIVATE hipblas_fortran_client lapack cblas stdc++fs )
+    target_link_libraries( hipblas-bench PRIVATE hipblas_fortran_client stdc++fs )
 endif()
 
 target_link_libraries( hipblas-bench PRIVATE ${BLAS_LIBRARY} roc::hipblas Threads::Threads )

@@ -113,10 +113,6 @@ if( BUILD_WITH_SOLVER )
   )
 endif( )
 
-if(LINK_BLIS)
-  set( BLIS_CPP ../common/blis_interface.cpp )
-endif()
-
 set( hipblas_test_common
   ../common/utility.cpp
   ../common/cblas_interface.cpp
@@ -134,11 +130,6 @@ set( hipblas_test_common
 )
 
 add_executable( hipblas-test ${hipblas_f90_source} ${hipblas_test_source} ${hipblas_solver_test_source} ${hipblas_test_common} )
-
-if(LINK_BLIS)
-    set( BLIS_INCLUDE_DIR ${BUILD_DIR}/deps/blis/include/blis )
-    set( BLIS_LIBRARY ${BUILD_DIR}/deps/blis/lib/libblis.so )
-endif()
 
 target_include_directories( hipblas-test
   PRIVATE
@@ -161,7 +152,7 @@ target_include_directories( hipblas-test
 )
 
 if (NOT WIN32)
-    target_link_libraries( hipblas-test PRIVATE hipblas_fortran_client lapack cblas stdc++fs )
+    target_link_libraries( hipblas-test PRIVATE hipblas_fortran_client stdc++fs )
 endif()
 
 target_link_libraries( hipblas-test PRIVATE ${BLAS_LIBRARY} roc::hipblas GTest::GTest Threads::Threads )

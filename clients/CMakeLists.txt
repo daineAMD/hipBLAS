@@ -75,15 +75,8 @@ endif( )
 
 if( BUILD_CLIENTS_BENCHMARKS OR BUILD_CLIENTS_TESTS)
   if( NOT WIN32 )
-    # Linking lapack library requires fortran flags
-    find_package( cblas REQUIRED CONFIG )
-    if (LINK_BLIS)
-      set( BLIS_INCLUDE_DIR ${BUILD_DIR}/deps/blis/include/blis )
-      set( BLIS_CPP ../common/blis_interface.cpp )
-      set( BLAS_LIBRARY ${BUILD_DIR}/deps/blis/lib/libblis.so )
-    else()
-      set( BLAS_LIBRARY "blas" )
-    endif()
+    find_package( BLAS  REQUIRED )
+    set( BLAS_LIBRARY openblas )
   else() # WIN32
     set( BLAS_INCLUDE_DIR ${OPENBLAS_DIR}/include CACHE PATH "OpenBLAS library include path" )
     find_library( BLAS_LIBRARY libopenblas
