@@ -17348,12 +17348,12 @@ HIPBLAS_EXPORT hipblasStatus_t hipblasZgeamStridedBatched_v2(hipblasHandle_t    
             HIPBLAS_FILL_MODE_LOWER:  A is a  lower triangular matrix
 
     @param[in]
-    n       [int]
-            n specifies the number of rows of B and C. n >= 0.
+    m       [int]
+            m specifies the number of rows of B and C. m >= 0.
 
     @param[in]
-    k       [int]
-            n specifies the number of columns of B and C. k >= 0.
+    n       [int]
+            n specifies the number of columns of B and C. n >= 0.
 
     @param[in]
     alpha
@@ -17399,8 +17399,8 @@ HIPBLAS_EXPORT hipblasStatus_t hipblasZgeamStridedBatched_v2(hipblasHandle_t    
 HIPBLAS_EXPORT hipblasStatus_t hipblasChemm(hipblasHandle_t       handle,
                                             hipblasSideMode_t     side,
                                             hipblasFillMode_t     uplo,
+                                            int                   m,
                                             int                   n,
-                                            int                   k,
                                             const hipblasComplex* alpha,
                                             const hipblasComplex* AP,
                                             int                   lda,
@@ -17413,8 +17413,8 @@ HIPBLAS_EXPORT hipblasStatus_t hipblasChemm(hipblasHandle_t       handle,
 HIPBLAS_EXPORT hipblasStatus_t hipblasZhemm(hipblasHandle_t             handle,
                                             hipblasSideMode_t           side,
                                             hipblasFillMode_t           uplo,
+                                            int                         m,
                                             int                         n,
-                                            int                         k,
                                             const hipblasDoubleComplex* alpha,
                                             const hipblasDoubleComplex* AP,
                                             int                         lda,
@@ -17427,8 +17427,8 @@ HIPBLAS_EXPORT hipblasStatus_t hipblasZhemm(hipblasHandle_t             handle,
 HIPBLAS_EXPORT hipblasStatus_t hipblasChemm_v2(hipblasHandle_t   handle,
                                                hipblasSideMode_t side,
                                                hipblasFillMode_t uplo,
+                                               int               m,
                                                int               n,
-                                               int               k,
                                                const hipComplex* alpha,
                                                const hipComplex* AP,
                                                int               lda,
@@ -17441,8 +17441,8 @@ HIPBLAS_EXPORT hipblasStatus_t hipblasChemm_v2(hipblasHandle_t   handle,
 HIPBLAS_EXPORT hipblasStatus_t hipblasZhemm_v2(hipblasHandle_t         handle,
                                                hipblasSideMode_t       side,
                                                hipblasFillMode_t       uplo,
+                                               int                     m,
                                                int                     n,
-                                               int                     k,
                                                const hipDoubleComplex* alpha,
                                                const hipDoubleComplex* AP,
                                                int                     lda,
@@ -17484,12 +17484,12 @@ HIPBLAS_EXPORT hipblasStatus_t hipblasZhemm_v2(hipblasHandle_t         handle,
             HIPBLAS_FILL_MODE_LOWER:  A_i is a  lower triangular matrix
 
     @param[in]
-    n       [int]
-            n specifies the number of rows of B_i and C_i. n >= 0.
+    m       [int]
+            m specifies the number of rows of B_i and C_i. m >= 0.
 
     @param[in]
-    k       [int]
-            k specifies the number of columns of B_i and C_i. k >= 0.
+    n       [int]
+            n specifies the number of columns of B_i and C_i. n >= 0.
 
     @param[in]
     alpha
@@ -17539,8 +17539,8 @@ HIPBLAS_EXPORT hipblasStatus_t hipblasZhemm_v2(hipblasHandle_t         handle,
 HIPBLAS_EXPORT hipblasStatus_t hipblasChemmBatched(hipblasHandle_t             handle,
                                                    hipblasSideMode_t           side,
                                                    hipblasFillMode_t           uplo,
+                                                   int                         m,
                                                    int                         n,
-                                                   int                         k,
                                                    const hipblasComplex*       alpha,
                                                    const hipblasComplex* const AP[],
                                                    int                         lda,
@@ -17554,8 +17554,8 @@ HIPBLAS_EXPORT hipblasStatus_t hipblasChemmBatched(hipblasHandle_t             h
 HIPBLAS_EXPORT hipblasStatus_t hipblasZhemmBatched(hipblasHandle_t                   handle,
                                                    hipblasSideMode_t                 side,
                                                    hipblasFillMode_t                 uplo,
+                                                   int                               m,
                                                    int                               n,
-                                                   int                               k,
                                                    const hipblasDoubleComplex*       alpha,
                                                    const hipblasDoubleComplex* const AP[],
                                                    int                               lda,
@@ -17569,8 +17569,8 @@ HIPBLAS_EXPORT hipblasStatus_t hipblasZhemmBatched(hipblasHandle_t              
 HIPBLAS_EXPORT hipblasStatus_t hipblasChemmBatched_v2(hipblasHandle_t         handle,
                                                       hipblasSideMode_t       side,
                                                       hipblasFillMode_t       uplo,
+                                                      int                     m,
                                                       int                     n,
-                                                      int                     k,
                                                       const hipComplex*       alpha,
                                                       const hipComplex* const AP[],
                                                       int                     lda,
@@ -17584,8 +17584,8 @@ HIPBLAS_EXPORT hipblasStatus_t hipblasChemmBatched_v2(hipblasHandle_t         ha
 HIPBLAS_EXPORT hipblasStatus_t hipblasZhemmBatched_v2(hipblasHandle_t               handle,
                                                       hipblasSideMode_t             side,
                                                       hipblasFillMode_t             uplo,
+                                                      int                           m,
                                                       int                           n,
-                                                      int                           k,
                                                       const hipDoubleComplex*       alpha,
                                                       const hipDoubleComplex* const AP[],
                                                       int                           lda,
@@ -17628,12 +17628,12 @@ HIPBLAS_EXPORT hipblasStatus_t hipblasZhemmBatched_v2(hipblasHandle_t           
             HIPBLAS_FILL_MODE_LOWER:  A_i is a  lower triangular matrix
 
     @param[in]
-    n       [int]
-            n specifies the number of rows of B_i and C_i. n >= 0.
+    m       [int]
+            m specifies the number of rows of B_i and C_i. m >= 0.
 
     @param[in]
-    k       [int]
-            k specifies the number of columns of B_i and C_i. k >= 0.
+    n       [int]
+            n specifies the number of columns of B_i and C_i. n >= 0.
 
     @param[in]
     alpha
@@ -17695,8 +17695,8 @@ HIPBLAS_EXPORT hipblasStatus_t hipblasZhemmBatched_v2(hipblasHandle_t           
 HIPBLAS_EXPORT hipblasStatus_t hipblasChemmStridedBatched(hipblasHandle_t       handle,
                                                           hipblasSideMode_t     side,
                                                           hipblasFillMode_t     uplo,
+                                                          int                   m,
                                                           int                   n,
-                                                          int                   k,
                                                           const hipblasComplex* alpha,
                                                           const hipblasComplex* AP,
                                                           int                   lda,
@@ -17713,8 +17713,8 @@ HIPBLAS_EXPORT hipblasStatus_t hipblasChemmStridedBatched(hipblasHandle_t       
 HIPBLAS_EXPORT hipblasStatus_t hipblasZhemmStridedBatched(hipblasHandle_t             handle,
                                                           hipblasSideMode_t           side,
                                                           hipblasFillMode_t           uplo,
+                                                          int                         m,
                                                           int                         n,
-                                                          int                         k,
                                                           const hipblasDoubleComplex* alpha,
                                                           const hipblasDoubleComplex* AP,
                                                           int                         lda,
@@ -17731,8 +17731,8 @@ HIPBLAS_EXPORT hipblasStatus_t hipblasZhemmStridedBatched(hipblasHandle_t       
 HIPBLAS_EXPORT hipblasStatus_t hipblasChemmStridedBatched_v2(hipblasHandle_t   handle,
                                                              hipblasSideMode_t side,
                                                              hipblasFillMode_t uplo,
+                                                             int               m,
                                                              int               n,
-                                                             int               k,
                                                              const hipComplex* alpha,
                                                              const hipComplex* AP,
                                                              int               lda,
@@ -17749,8 +17749,8 @@ HIPBLAS_EXPORT hipblasStatus_t hipblasChemmStridedBatched_v2(hipblasHandle_t   h
 HIPBLAS_EXPORT hipblasStatus_t hipblasZhemmStridedBatched_v2(hipblasHandle_t         handle,
                                                              hipblasSideMode_t       side,
                                                              hipblasFillMode_t       uplo,
+                                                             int                     m,
                                                              int                     n,
-                                                             int                     k,
                                                              const hipDoubleComplex* alpha,
                                                              const hipDoubleComplex* AP,
                                                              int                     lda,
